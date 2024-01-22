@@ -60,7 +60,7 @@ contract MPROMasterDistributor is Context, AccessControl {
     bytes32 public constant DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER =
         keccak256("DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER");
 
-    IMPRORoleManager private roleManagerContract;
+    IMPRORoleManager private mproRoleManager;
     IMPROToken private mproToken;
 
     /**
@@ -114,7 +114,7 @@ contract MPROMasterDistributor is Context, AccessControl {
      * The value is expressed in the contract's token decimals, and it remains constant throughout
      * the contract's lifetime.
      */
-    uint256 private constant initialDaylyDistribution = 250_000 * 10 ** 8;
+    uint256 private constant initialDaylyDistribution = 250_000 * 10 ** 18;
 
     /**
      * @dev Public array to store distribution reduction configurations.
@@ -155,6 +155,14 @@ contract MPROMasterDistributor is Context, AccessControl {
      * If all criteria are met, the modifier allows the decorated function or operation to proceed.
      * Otherwise, it reverts with specific error messages.
      */
+
+    event Distributed(address indexed _to, uint256 amount);
+    event SetDistribiutionStartTime(uint256 _startTime);
+    event AddDistributionReduction(
+        uint256 _redutionTimestamp,
+        uint256 _reductionAmount
+    );
+
     modifier reductionEnabled(
         uint256 _reductionTimestamp,
         uint256 _reductionAmount
@@ -188,25 +196,32 @@ contract MPROMasterDistributor is Context, AccessControl {
     }
 
     /**
-     * @dev Constructor for the contract.
+     * @dev Constructor for initializing the contract with specific parameters.
      *
-     * Initializes the contract by setting up the distribution start times and assigning the OWNER_ROLE
-     * to the provided owner address. The distribution timestamps are set relative to the current
-     * block timestamp at the time of contract deployment.
+     * This constructor is responsible for setting up the initial state of the contract, including
+     * the assignment of the owner role and configuring the role management contract. It also initializes
+     * the timestamps for the start and deadline of the distribution period.
      *
-     * - `distributionStartTimestamp` is set to 14 days after the contract deployment.
-     * - `distributionStartTimestampDeadLine` is set to 30 days after the contract deployment.
-     * This setup creates a window during which distributions can start, determined by these two timestamps.
+     * @param _owner The address that will be granted the owner role. This address will have
+     *               administrative control over certain functions of the contract, typically including
+     *               key management and operational parameters.
      *
-     * The OWNER_ROLE is a critical role that will likely have high-level permissions and capabilities
-     * within the contract, so it should be assigned carefully.
-     *
-     * @param _owner The address that will be granted the OWNER_ROLE, typically the address deploying
-     *               the contract or a designated administrator.
+     * @param _roleManagerAddress The address of the Role Manager contract. This contract is used
+     *                            for managing different roles and permissions within the system. It
+     *                            should conform to the IMPRORoleManager interface, providing
+     *                            functions for role-based access control.
      */
-    constructor(address _owner) {
+    constructor(address _owner, address _roleManagerAddress) {
+        // Initialize the role manager contract interface with the provided address.
+        mproRoleManager = IMPRORoleManager(_roleManagerAddress);
+        // Set the distribution start timestamp to 14 days from the current block time.
+        // This delay allows for a preparation period before the distribution begins.
         distributionStartTimestamp = block.timestamp + 14 days;
+        // Set the deadline for the distribution period to 30 days from the current block time.
+        // This sets a finite period for the distribution process, ensuring a clear end date.
         distributionStartTimestampDeadLine = block.timestamp + 30 days;
+        // Assign the OWNER_ROLE to the provided owner address. This role typically includes
+        // elevated privileges and is crucial for contract administration and oversight.
         _grantRole(OWNER_ROLE, _owner);
     }
 
@@ -253,19 +268,22 @@ contract MPROMasterDistributor is Context, AccessControl {
                 memory distributionReduction = distributionReductions[index];
             uint daysElapsedToReduction = (block.timestamp -
                 distributionReduction.reductionTimestamp) / SECONDS_PER_DAY;
-            if (daysElapsed > daysElapsedToReduction) {
+            if (daysElapsed >= daysElapsedToReduction) {
                 // Days in current period
                 uint256 daysInCurrentPeriod = daysElapsed -
                     daysElapsedToReduction;
                 totalDistribution +=
-                    daysInCurrentPeriod *
-                    distributionReduction.daylyDistribution;
+                    distributionReduction.daylyDistribution +
+                    (daysInCurrentPeriod *
+                        distributionReduction.daylyDistribution);
                 // Update daysElapsed for previous period
                 daysElapsed = daysElapsedToReduction;
             }
         }
         // Remaining days are in the first period
-        totalDistribution += daysElapsed * initialDaylyDistribution;
+        totalDistribution +=
+            initialDaylyDistribution +
+            (daysElapsed * initialDaylyDistribution);
 
         return totalDistribution;
     }
@@ -319,7 +337,7 @@ contract MPROMasterDistributor is Context, AccessControl {
         require(_amount > 0, "amount must be greater than 0");
         require(
             block.timestamp >= distributionStartTimestamp,
-            "distribution has not started yet"
+            "MPROMasterDistributor: Minting is not enabled yet"
         );
         require(
             distributedTokens + _amount <=
@@ -328,6 +346,8 @@ contract MPROMasterDistributor is Context, AccessControl {
         );
         distributedTokens += _amount;
         mproToken.mint(_to, _amount);
+
+        emit Distributed(_to, _amount);
     }
 
     /**
@@ -398,6 +418,8 @@ contract MPROMasterDistributor is Context, AccessControl {
         );
 
         distributionStartTimestamp = _startTime;
+
+        emit SetDistribiutionStartTime(_startTime);
     }
 
     /**
@@ -430,6 +452,8 @@ contract MPROMasterDistributor is Context, AccessControl {
         distributionReductions.push(
             DistributionReduction(_redutionTimestamp, _reductionAmount)
         );
+
+        emit AddDistributionReduction(_redutionTimestamp, _reductionAmount);
     }
 
     /**
@@ -461,7 +485,7 @@ contract MPROMasterDistributor is Context, AccessControl {
      * is whitelisted, in which case no tokens are burned.
      *
      * The function performs the following operations:
-     * - It checks if the sender (`_from`) is whitelisted using the `roleManagerContract.isWhitelisted`
+     * - It checks if the sender (`_from`) is whitelisted using the `mproRoleManager.isWhitelisted`
      *   function. If the sender is whitelisted, the function returns 0, indicating no burn is applied.
      * - If the sender is not whitelisted, the function calculates the burn amount by applying the
      *   burn rate to the transaction amount (`_amount`). The burn rate is represented as a percentage
@@ -480,7 +504,7 @@ contract MPROMasterDistributor is Context, AccessControl {
         uint256 _amount
     ) external view returns (uint256) {
         // If the sender is whitelisted, no burn fee is applied
-        if (roleManagerContract.isWhitelisted(_from)) {
+        if (mproRoleManager.isWhitelisted(_from)) {
             return 0;
         }
         return _amount.mul(burnRate).div(10000);
@@ -508,6 +532,41 @@ contract MPROMasterDistributor is Context, AccessControl {
     function setBurnRate(uint256 _burnFee) external onlyRole(OWNER_ROLE) {
         require(_burnFee <= 1000, "burnFee must be less than or equal to 10%");
         burnRate = _burnFee;
+    }
+
+    /**
+     * @dev Public function to grant a specific role to an account.
+     *
+     * This function allows an address with the `OWNER_ROLE` to grant a specific role to the `_account`
+     * address. Roles define different sets of permissions or responsibilities within the contract,
+     * and granting a role to an account assigns those associated privileges.
+     *
+     * The function takes two parameters:
+     * - `role`: The bytes32 identifier of the role to be granted.
+     * - `_account`: The address to which the role is to be granted.
+     *
+     * Access to this function is restricted to addresses with the `OWNER_ROLE`, ensuring that only
+     * contract owners or administrators can grant roles.
+     *
+     * Before granting the role, the function performs the following checks:
+     * - Ensures that the `_account` address is not blocklisted, preventing blocklisted accounts
+     *   from receiving roles.
+     * - Verifies that the `_account` address is not the zero address (`address(0)`) to prevent
+     *   accidental modifications of the zero address, which may have special significance.
+     *
+     * @param role The bytes32 identifier of the role to be granted.
+     * @param _account The address to which the role is to be granted.
+     *
+     * Requirements:
+     * - The `_account` address must not be blocklisted, and it must not be the zero address (`address(0)`).
+     *   This ensures that roles are granted to valid, non-blocklisted addresses.
+     */
+
+    function grantRole(
+        bytes32 role,
+        address _account
+    ) public virtual override onlyRole(OWNER_ROLE) {
+        _grantRole(role, _account);
     }
 
     /**

@@ -26,8 +26,8 @@ interface IMPROMasterDistributor {
 }
 
 contract MPROToken is OFTV2, ERC20Votes {
-    IMPRORoleManager private roleManagerContract;
-    IMPROMasterDistributor private distributorContract;
+    IMPRORoleManager private mproRoleManager;
+    IMPROMasterDistributor private mproMasterDistributor;
 
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -60,9 +60,9 @@ contract MPROToken is OFTV2, ERC20Votes {
      *   to these base contracts.
      * - Loops through the `premintAddresses` array, minting tokens in the amounts specified in
      *   `premintValues` to each address. This is used to distribute an initial supply of tokens.
-     * - Sets the `roleManagerContract` by casting the `_roleManagerContract` address to the
+     * - Sets the `mproRoleManager` by casting the `_mproRoleManager` address to the
      *   IMPRORoleManager interface, which is expected to manage role-based access in the contract.
-     * - Sets the `distributorContract` by casting the `_distributorContract` address to the
+     * - Sets the `mproMasterDistributor` by casting the `_mproMasterDistributor` address to the
      *   IMPROMasterDistributor interface, which is expected to handle distribution-related logic.
      *
      * The `_lzEndpoint` parameter is specific to the OFTV2 initialization and is related to LayerZero
@@ -76,8 +76,8 @@ contract MPROToken is OFTV2, ERC20Votes {
      * @param premintAddresses Array of addresses that will receive the preminted tokens.
      * @param premintValues Array of token amounts corresponding to each premint address.
      * @param _lzEndpoint Address for the LayerZero endpoint, used in OFTV2 initialization.
-     * @param _roleManagerContract Address of the contract managing roles and permissions.
-     * @param _distributorContract Address of the contract managing token distributions.
+     * @param _mproRoleManager Address of the contract managing roles and permissions.
+     * @param _mproMasterDistributor Address of the contract managing token distributions.
      */
     constructor(
         string memory _name,
@@ -85,14 +85,14 @@ contract MPROToken is OFTV2, ERC20Votes {
         address[] memory premintAddresses,
         uint256[] memory premintValues,
         address _lzEndpoint,
-        address _roleManagerContract,
-        address _distributorContract
+        address _mproRoleManager,
+        address _mproMasterDistributor
     ) OFTV2(_name, _symbol, 6, _lzEndpoint) ERC20Permit(_name) {
         for (uint256 i = 0; i < premintAddresses.length; i++) {
             super._mint(premintAddresses[i], premintValues[i]);
         }
-        roleManagerContract = IMPRORoleManager(_roleManagerContract);
-        distributorContract = IMPROMasterDistributor(_distributorContract);
+        mproRoleManager = IMPRORoleManager(_mproRoleManager);
+        mproMasterDistributor = IMPROMasterDistributor(_mproMasterDistributor);
     }
 
     /**
@@ -126,8 +126,8 @@ contract MPROToken is OFTV2, ERC20Votes {
      * @dev External function to mint new tokens.
      *
      * This function allows for the external minting of tokens, but restricts access to only those
-     * accounts that have been granted distributor privileges by the roleManagerContract. The
-     * `isDistributor` function of the roleManagerContract is used to check if the caller (_msgSender())
+     * accounts that have been granted distributor privileges by the mproRoleManager. The
+     * `isDistributor` function of the mproRoleManager is used to check if the caller (_msgSender())
      * has the necessary role to perform the minting.
      *
      * The `virtual` keyword indicates that this function can be overridden in derived contracts,
@@ -144,7 +144,7 @@ contract MPROToken is OFTV2, ERC20Votes {
      */
     function mint(address account, uint256 amount) external virtual {
         require(
-            roleManagerContract.isDistributor(_msgSender()),
+            mproRoleManager.isDistributor(_msgSender()),
             "Distributor only"
         );
         _mint(account, amount);
@@ -208,7 +208,7 @@ contract MPROToken is OFTV2, ERC20Votes {
      * a token holder to grant permission to another account (referred to as the spender) to transfer
      * up to a specified number of tokens on their behalf.
      *
-     * The function includes an additional security feature using the `roleManagerContract` to check
+     * The function includes an additional security feature using the `mproRoleManager` to check
      * whether the approval is allowed. This could be based on additional business logic or
      * restrictions defined in the role manager contract.
      *
@@ -224,7 +224,7 @@ contract MPROToken is OFTV2, ERC20Votes {
         address _spender,
         uint256 _value
     ) public override returns (bool) {
-        roleManagerContract.approveAllowed(_msgSender(), _spender);
+        mproRoleManager.approveAllowed(_msgSender(), _spender);
         super._approve(_msgSender(), _spender, _value);
         return true;
     }
@@ -238,7 +238,7 @@ contract MPROToken is OFTV2, ERC20Votes {
      * burning tokens on transfer.
      *
      * The function performs the following operations:
-     * - Calls `roleManagerContract.transferAllowed` to perform custom checks based on the contract's
+     * - Calls `mproRoleManager.transferAllowed` to perform custom checks based on the contract's
      *   business logic. This might include restrictions on who can send or receive tokens or other
      *   specific conditions.
      * - Calls the internal `_burnOnTransfer` function to calculate the amount after applying the
@@ -258,12 +258,8 @@ contract MPROToken is OFTV2, ERC20Votes {
         address _to,
         uint256 _value
     ) public override returns (bool) {
-        roleManagerContract.transferAllowed(_msgSender(), _to, _msgSender());
-        super._transfer(
-            _msgSender(),
-            _to,
-            _burnOnTransfer(_msgSender(), _value)
-        );
+        mproRoleManager.transferAllowed(_msgSender(), _to, _msgSender());
+        _transfer(_msgSender(), _to, _burnOnTransfer(_msgSender(), _value));
         return true;
     }
 
@@ -276,7 +272,7 @@ contract MPROToken is OFTV2, ERC20Votes {
      * a specified number of tokens on their behalf.
      *
      * The function includes additional logic as follows:
-     * - Calls `roleManagerContract.transferAllowed` to perform custom validation. This could involve
+     * - Calls `mproRoleManager.transferAllowed` to perform custom validation. This could involve
      *   checks based on specific business rules, like validating the roles of the involved parties
      *   (_from, _to, and the message sender).
      * - Executes the transfer through the internal `_transferFrom` function, which handles the actual
@@ -298,7 +294,7 @@ contract MPROToken is OFTV2, ERC20Votes {
         address _to,
         uint256 _amount
     ) public override returns (bool) {
-        roleManagerContract.transferAllowed(_from, _to, _msgSender());
+        mproRoleManager.transferAllowed(_from, _to, _msgSender());
         _transferFrom(_from, _to, _burnOnTransfer(_from, _amount));
         return true;
     }
@@ -307,12 +303,12 @@ contract MPROToken is OFTV2, ERC20Votes {
      * @dev Internal function to handle token burning on transfers.
      *
      * This function calculates and executes the burning of a portion of tokens during a transfer,
-     * based on the current burn rate as determined by the `distributorContract.getBurnAmount`
+     * based on the current burn rate as determined by the `mproMasterDistributor.getBurnAmount`
      * function. It is designed to be called as part of the token transfer process to automatically
      * apply a burn mechanism on transfers, reducing the amount of tokens ultimately transferred.
      *
      * The function performs the following operations:
-     * - Calls `getBurnAmount` from `distributorContract` to determine the amount of tokens that
+     * - Calls `getBurnAmount` from `mproMasterDistributor` to determine the amount of tokens that
      *   should be burned from the transfer amount, based on the sender and the total transfer amount.
      * - If the calculated burn amount is greater than zero and less than the total transfer amount,
      *   it proceeds to burn that portion of tokens from the sender's balance by calling the internal
@@ -331,7 +327,7 @@ contract MPROToken is OFTV2, ERC20Votes {
         address _sender,
         uint256 _amount
     ) internal returns (uint256) {
-        uint256 burnAmount = distributorContract.getBurnAmount(
+        uint256 burnAmount = mproMasterDistributor.getBurnAmount(
             _sender,
             _amount
         );

@@ -3,14 +3,9 @@ pragma solidity ^0.8.8;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-// Dopisywanie do blocklist
-// Dopisywanie do whitelist
-// Grant i revoke role przez ownera
-
 contract MPRORoleManager is AccessControl {
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant LISTER_ROLE = keccak256("LISTER_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE");
 
     /**
@@ -204,10 +199,7 @@ contract MPRORoleManager is AccessControl {
         bool _blocklist
     ) external onlyRole(LISTER_ROLE) notZeroAddress(_account) {
         if (
-            isOwner(_account) ||
-            isLister(_account) ||
-            isPauser(_account) ||
-            isDistributor(_account)
+            isOwner(_account) || isLister(_account) || isDistributor(_account)
         ) {
             revert("account has a role and cannot be blocklisted");
         }
@@ -250,10 +242,6 @@ contract MPRORoleManager is AccessControl {
 
     function isLister(address _account) public view returns (bool) {
         return hasRole(LISTER_ROLE, _account);
-    }
-
-    function isPauser(address _account) public view returns (bool) {
-        return hasRole(PAUSER_ROLE, _account);
     }
 
     function isOwner(address _account) public view returns (bool) {
@@ -341,13 +329,15 @@ contract MPRORoleManager is AccessControl {
         address _from,
         address _to,
         address _msgSender
-    ) public view {
+    ) public view returns (bool) {
         require(
             !isBlocklisted(_from) &&
                 !isBlocklisted(_to) &&
                 !isBlocklisted(_msgSender),
             "Action on blocklisted account"
         );
+
+        return true;
     }
 
     /**
@@ -374,10 +364,15 @@ contract MPRORoleManager is AccessControl {
      *   on the blocklist. If any of them are blocklisted, the function reverts with an error message.
      */
 
-    function approveAllowed(address _spender, address _msgSender) public view {
+    function approveAllowed(
+        address _spender,
+        address _msgSender
+    ) public view returns (bool) {
         require(
             !isBlocklisted(_spender) && !isBlocklisted(_msgSender),
             "Action on blocklisted account"
         );
+
+        return true;
     }
 }
