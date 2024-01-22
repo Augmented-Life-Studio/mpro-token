@@ -5,6 +5,7 @@ import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-deploy"
 import "@nomiclabs/hardhat-web3"
 import "hardhat-deploy-ethers"
+import "./tasks/index"
 
 const {
 	bscscanApiKey,
