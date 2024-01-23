@@ -1,5 +1,3 @@
-import { task } from "hardhat/config";
-
 //
 task(
 	'setTrustedRemote',
@@ -19,8 +17,12 @@ task(
 
 //
 //
-task("setMinDstGas", "set min gas required on the destination gas", require("./setMinDstGas"))
-	.addParam("packetType", "message Packet type")
-	.addParam("targetNetwork", "the chainId to transfer to")
-	.addParam("contract", "contract name")
-	.addParam("minGas", "min gas")
+task(
+	'setMinDstGas',
+	'set min gas required on the destination gas',
+	require('./setMinDstGas'),
+)
+	.addParam('packetType', 'message Packet type')
+	.addParam('targetNetwork', 'the chainId to transfer to')
+	.addParam('contract', 'contract name')
+	.addParam('minGas', 'min gas')

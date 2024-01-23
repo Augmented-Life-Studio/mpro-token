@@ -21,16 +21,16 @@ describe('JakantDemoToken', () => {
   });
 
   describe('Deployment', () => {
-    it('Should set the right jakantDemoToken name', async () => {
+    it('Should set the right MPROtoken name', async () => {
       expect(await mproToken.name()).to.equal('MPRO');
     })
-    it('Should set the right jakantDemoToken symbol', async () => {
+    it('Should set the right MPROtoken symbol', async () => {
       expect(await mproToken.symbol()).to.equal('MPRO');
     })
-    it('Should set the right jakantDemoToken decimals', async () => {
+    it('Should set the right MPROtoken decimals', async () => {
       expect(await mproToken.decimals()).to.equal(18);
     })
-    it("Should set the right jakantDemoToken totalSupply", async () => {
+    it("Should set the right MPROtoken totalSupply", async () => {
       expect(await mproToken.totalSupply()).to.equal(0);
     })
     it("Should have the right maxCap", async () => {

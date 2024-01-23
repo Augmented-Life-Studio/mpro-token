@@ -56,8 +56,6 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     // Grant role distributor to mproMasterDistributor
     await MproRoleManager.grantRole(await MproRoleManager.DISTRIBUTOR_ROLE(), mproMasterDistributor.address);
 
-
-
     const mproToken = await deploy("MPROToken", {
         from: deployer,
         args: [
@@ -76,6 +74,8 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     console.log("MPROToken deployed to:", mproToken);
 
     await verifyContractWithRetry("MPROToken", mproToken.address, mproToken.args);
+
+    await MproMasterDistributor.setMPROToken(mproToken.address);
 }
 
 module.exports.tags = ["MPROToken"]

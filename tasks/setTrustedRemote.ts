@@ -1,8 +1,7 @@
-import { ethers } from "hardhat"
-
 import CHAIN_ID from '../constants/chainIds.json'
 import { getDeploymentAddresses } from '../utils/readStatic'
 import { MPROToken } from "../typechain-types"
+import { ethers } from 'ethers'
 
 module.exports = async function (taskArgs: any, hre: any) {
 	let localContract, remoteContract
@@ -23,7 +22,7 @@ module.exports = async function (taskArgs: any, hre: any) {
 	}
 
 	// get local contract
-	const localContractInstance: MPROToken = await ethers.getContract(localContract)
+	const localContractInstance: MPROToken = await hre.ethers.getContract(localContract)
 
 	// get deployed remote contract address
 	const remoteAddress = getDeploymentAddresses(taskArgs.targetNetwork)[
@@ -34,7 +33,7 @@ module.exports = async function (taskArgs: any, hre: any) {
 	const remoteChainId = CHAIN_ID[taskArgs.targetNetwork as keyof typeof CHAIN_ID]
 
 	// concat remote and local address
-	let remoteAndLocal = hre.ethers.utils.solidityPack(
+	let remoteAndLocal = ethers.solidityPacked(
 		['address', 'address'],
 		[remoteAddress, localContractInstance.target],
 	)
