@@ -162,7 +162,7 @@ const config: HardhatUserConfig = {
 			"bsc-testnet": bscscanApiKey,
 			bsc: bscscanApiKey,
 			polygon: polygonMumbaiApiKey,
-			mumbai: polygonMumbaiApiKey,
+			polygonMumbai: polygonMumbaiApiKey,
 			ethereum: ethApiKey,
 		},
 	},

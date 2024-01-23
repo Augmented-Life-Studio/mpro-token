@@ -29,6 +29,12 @@ npx hardhat --network polygon setTrustedRemote --target-network bsc --contract M
 3. Set the "minDstGas" required on the destination chain.
 
 ```shell
-npx hardhat --network bsc setMinDstGas --packet-type 0 --target-network polygon --contract MPROToken --min-gas 100000
-npx hardhat --network polygon setMinDstGas --packet-type 0 --target-network bsc --contract MPROToken --min-gas 100000
+npx hardhat --network bsc setMinDstGas --packet-type 0 --target-network polygon --contract JAKANTToken --min-gas 100000
+npx hardhat --network polygon setMinDstGas --packet-type 0 --target-network bsc --contract JAKANTToken --min-gas 100000
+```
+
+4. Send tokens from one chain to another.
+
+```shell
+npx hardhat --network bsc oftSendTokens --target-network polygon --qty 1 --contract JAKANTToken
 ```
