@@ -83,12 +83,14 @@ contract MPROToken is OFTV2, ERC20Votes {
         address[] memory premintAddresses,
         uint256[] memory premintValues,
         address _lzEndpoint,
-        address _mproMasterDistributor
+        address _mproMasterDistributor,
+        address _owner
     ) OFTV2(_name, _symbol, 6, _lzEndpoint) ERC20Permit(_name) {
         for (uint256 i = 0; i < premintAddresses.length; i++) {
             super._mint(premintAddresses[i], premintValues[i]);
         }
         mproMasterDistributor = IMPROMasterDistributor(_mproMasterDistributor);
+        _transferOwnership(_owner);
     }
 
     /**

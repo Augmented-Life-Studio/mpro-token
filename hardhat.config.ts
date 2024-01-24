@@ -162,7 +162,7 @@ const config: HardhatUserConfig = {
 	etherscan: {
 		// Change it based on scan
 		apiKey: {
-			"bsc-testnet": bscscanApiKey,
+			bscTestnet: bscscanApiKey,
 			bsc: bscscanApiKey,
 			polygon: polygonMumbaiApiKey,
 			polygonMumbai: polygonMumbaiApiKey,

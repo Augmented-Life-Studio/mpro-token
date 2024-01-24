@@ -38,7 +38,7 @@ describe('MPROMasterDistributor', () => {
 
     const MPROToken: MPROToken__factory = await ethers.getContractFactory('MPROToken');
     mproToken = await MPROToken.deploy(
-      'MPRO', 'MPRO', [vesting], [ethers.parseUnits("100")], '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1', mproMasterDistributor.target
+      'MPRO', 'MPRO', [vesting], [ethers.parseUnits("100")], '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1', mproMasterDistributor.target, owner.address
     );
 
     await mproMasterDistributor.connect(owner).setMPROToken(mproToken.target);
@@ -47,6 +47,7 @@ describe('MPROMasterDistributor', () => {
   describe('Deployment', () => {
     it('Should set the right owner', async () => {
       expect(await mproMasterDistributor.owner()).to.be.equal(owner.address);
+      expect(await mproToken.owner()).to.equal(owner.address);
     });
     it('Should set the right distributor', async () => {
       expect(await mproMasterDistributor.hasRole(await mproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE(), distributor.address)).to.be.true;

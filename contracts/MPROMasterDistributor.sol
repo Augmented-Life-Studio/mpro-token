@@ -188,6 +188,12 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         uint256 _redutionTimestamp,
         uint256 _reductionAmount
     );
+    event SetMPROToken(address _mproTokenAddress);
+    event SetBurnRate(uint256 _burnRate);
+    event SetDistributorTimeAdministratorRoleManager(
+        address _roleManagerAddress
+    );
+    event SetDistributorTimeAdministratorRole(address _roleManagerAddress);
 
     modifier reductionEnabled(
         uint256 _reductionTimestamp,
@@ -520,6 +526,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      */
     function setMPROToken(address _mproTokenAddress) external onlyOwner {
         mproToken = IMPROToken(_mproTokenAddress);
+        emit SetMPROToken(_mproTokenAddress);
     }
 
     /**
@@ -580,6 +587,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
             "MPROMasterDistributor: Burn rate cannot be greater than or equal to 10%"
         );
         burnRate = _burnRate;
+        emit SetBurnRate(_burnRate);
     }
 
     /**
@@ -606,6 +614,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
             DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER,
             _roleManagerAddress
         );
+        emit SetDistributorTimeAdministratorRoleManager(_roleManagerAddress);
     }
 
     /**
@@ -631,6 +640,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         address _roleManagerAddress
     ) external onlyRole(DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER) {
         _grantRole(DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE, _roleManagerAddress);
+        emit SetDistributorTimeAdministratorRole(_roleManagerAddress);
     }
 
     /**

@@ -8,10 +8,10 @@ import { MPROToken, MPROToken__factory, MPROMasterDistributor, MPROMasterDistrib
 describe("MPROToken", function () {
   let mproToken: MPROToken;
   let masterDistributor: MPROMasterDistributor;
-  let owner: HardhatEthersSigner, lister: HardhatEthersSigner, addr1: HardhatEthersSigner, addr2: HardhatEthersSigner, addr3: HardhatEthersSigner;
+  let deployer: HardhatEthersSigner, owner: HardhatEthersSigner, lister: HardhatEthersSigner, addr1: HardhatEthersSigner, addr2: HardhatEthersSigner, addr3: HardhatEthersSigner;
 
   beforeEach(async function () {
-    [owner, lister, addr1, addr2, addr3] = await ethers.getSigners();
+    [deployer, owner, lister, addr1, addr2, addr3] = await ethers.getSigners();
 
     const MasterDistributorFactory: MPROMasterDistributor__factory = await ethers.getContractFactory("MPROMasterDistributor");
     masterDistributor = await MasterDistributorFactory.deploy(owner.address);
@@ -27,7 +27,8 @@ describe("MPROToken", function () {
       [owner.address], // Premint addresses
       [ethers.parseEther("100")], // Premint values
       ethers.ZeroAddress, // LayerZero Endpoint
-      masterDistributorAddress
+      masterDistributorAddress,
+      owner.address
     );
 
   });
@@ -37,6 +38,7 @@ describe("MPROToken", function () {
       expect(await mproToken.name()).to.equal("MPROToken");
       expect(await mproToken.symbol()).to.equal("MPRO");
       expect(await mproToken.balanceOf(owner.address)).to.equal(ethers.parseEther("100"));
+      expect(await mproToken.owner()).to.equal(owner.address);
     });
   });
 
