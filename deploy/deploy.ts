@@ -1,10 +1,9 @@
 import { ethers } from "hardhat";
 import { LZ_ENDPOINTS } from "../constants/layerzeroEndpoints"
 import hre from "hardhat";
-import { Deployment, DeploymentsExtension } from "hardhat-deploy/dist/types";
+import { DeploymentsExtension } from "hardhat-deploy/dist/types";
 import { verifyContractWithRetry } from "../utils/verifyContract";
-import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
-import { MPROMasterDistributor, MPRORoleManager } from "../typechain-types";
+import { MPROMasterDistributor } from "../typechain-types";
 
 // npx hardhat deploy --tags MPROToken --network bsc-testnet
 
@@ -20,25 +19,9 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     const { deploy } = deployments
     const lzEndpointAddress = LZ_ENDPOINTS[hre.network.name as keyof typeof LZ_ENDPOINTS]
 
-
-    const mproRoleManager = await deploy("MPRORoleManager", {
-        from: deployer,
-        args: [deployer],
-        log: true,
-        waitConfirmations: 1,
-    })
-
-    const MproRoleManagerFactory = await ethers.getContractFactory("MPRORoleManager")
-    const MproRoleManager = await MproRoleManagerFactory.attach(mproRoleManager.address) as MPRORoleManager;
-
-    console.log("MPRORoleManager deployed to:", mproRoleManager.address);
-
-    await verifyContractWithRetry("MPRORoleManager", mproRoleManager.address, mproRoleManager.args);
-
-
     const mproMasterDistributor = await deploy("MPROMasterDistributor", {
         from: deployer,
-        args: [deployer, mproRoleManager.address],
+        args: [deployer],
         log: true,
         waitConfirmations: 1,
     })
@@ -53,9 +36,6 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     // Grant role master distributor to mproMasterDistributor
     await MproMasterDistributor.grantRole(await MproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE(), MPRO_MASTER_DISTRIBUTOR);
 
-    // Grant role distributor to mproMasterDistributor
-    await MproRoleManager.grantRole(await MproRoleManager.DISTRIBUTOR_ROLE(), mproMasterDistributor.address);
-
     const mproToken = await deploy("MPROToken", {
         from: deployer,
         args: [
@@ -64,7 +44,6 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
             [deployer], // Premint addresses
             [ethers.parseEther("100")], // Premint values
             lzEndpointAddress, // LayerZero Endpoint
-            mproRoleManager.address,
             mproMasterDistributor.address
         ],
         log: true,

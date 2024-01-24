@@ -6,8 +6,15 @@ import "@layerzerolabs/solidity-examples/contracts/token/oft/v2/OFTV2.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-interface IMPRORoleManager {
+interface IMPROMasterDistributor {
+    function getBurnAmount(
+        address _from,
+        uint256 _amount
+    ) external view returns (uint256);
+
     function isDistributor(address account) external view returns (bool);
+
+    function mintAllowed(address minter) external view returns (bool);
 
     function approveAllowed(address, address) external view returns (bool);
 
@@ -18,15 +25,7 @@ interface IMPRORoleManager {
     ) external view returns (bool);
 }
 
-interface IMPROMasterDistributor {
-    function getBurnAmount(
-        address _from,
-        uint256 _amount
-    ) external view returns (uint256);
-}
-
 contract MPROToken is OFTV2, ERC20Votes {
-    IMPRORoleManager private mproRoleManager;
     IMPROMasterDistributor private mproMasterDistributor;
 
     using SafeERC20 for IERC20;
@@ -76,7 +75,6 @@ contract MPROToken is OFTV2, ERC20Votes {
      * @param premintAddresses Array of addresses that will receive the preminted tokens.
      * @param premintValues Array of token amounts corresponding to each premint address.
      * @param _lzEndpoint Address for the LayerZero endpoint, used in OFTV2 initialization.
-     * @param _mproRoleManager Address of the contract managing roles and permissions.
      * @param _mproMasterDistributor Address of the contract managing token distributions.
      */
     constructor(
@@ -85,13 +83,11 @@ contract MPROToken is OFTV2, ERC20Votes {
         address[] memory premintAddresses,
         uint256[] memory premintValues,
         address _lzEndpoint,
-        address _mproRoleManager,
         address _mproMasterDistributor
     ) OFTV2(_name, _symbol, 6, _lzEndpoint) ERC20Permit(_name) {
         for (uint256 i = 0; i < premintAddresses.length; i++) {
             super._mint(premintAddresses[i], premintValues[i]);
         }
-        mproRoleManager = IMPRORoleManager(_mproRoleManager);
         mproMasterDistributor = IMPROMasterDistributor(_mproMasterDistributor);
     }
 
@@ -143,10 +139,7 @@ contract MPROToken is OFTV2, ERC20Votes {
      * @param amount The amount of tokens to be minted and allocated to the account.
      */
     function mint(address account, uint256 amount) external virtual {
-        require(
-            mproRoleManager.isDistributor(_msgSender()),
-            "Distributor only"
-        );
+        mproMasterDistributor.mintAllowed(_msgSender());
         _mint(account, amount);
     }
 
@@ -224,7 +217,7 @@ contract MPROToken is OFTV2, ERC20Votes {
         address _spender,
         uint256 _value
     ) public override returns (bool) {
-        mproRoleManager.approveAllowed(_msgSender(), _spender);
+        mproMasterDistributor.approveAllowed(_msgSender(), _spender);
         super._approve(_msgSender(), _spender, _value);
         return true;
     }
@@ -258,7 +251,7 @@ contract MPROToken is OFTV2, ERC20Votes {
         address _to,
         uint256 _value
     ) public override returns (bool) {
-        mproRoleManager.transferAllowed(_msgSender(), _to, _msgSender());
+        mproMasterDistributor.transferAllowed(_msgSender(), _to, _msgSender());
         _transfer(_msgSender(), _to, _burnOnTransfer(_msgSender(), _value));
         return true;
     }
@@ -294,7 +287,7 @@ contract MPROToken is OFTV2, ERC20Votes {
         address _to,
         uint256 _amount
     ) public override returns (bool) {
-        mproRoleManager.transferAllowed(_from, _to, _msgSender());
+        mproMasterDistributor.transferAllowed(_from, _to, _msgSender());
         _transferFrom(_from, _to, _burnOnTransfer(_from, _amount));
         return true;
     }

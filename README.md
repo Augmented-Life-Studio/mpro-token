@@ -38,3 +38,6 @@ npx hardhat --network polygon setMinDstGas --packet-type 0 --target-network bsc 
 ```shell
 npx hardhat --network bsc oftSendTokens --target-network polygon --qty 1 --contract JAKANTToken
 ```
+
+
+

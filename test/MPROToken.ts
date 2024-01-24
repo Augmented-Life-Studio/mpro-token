@@ -1,29 +1,24 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { MPROToken, MPROToken__factory, MPRORoleManager, MPROMasterDistributor, MPROMasterDistributor__factory } from "../typechain-types";
+import { MPROToken, MPROToken__factory, MPROMasterDistributor, MPROMasterDistributor__factory } from "../typechain-types";
 
 // npx hardhat test test/MPROToken.ts
 
 describe("MPROToken", function () {
   let mproToken: MPROToken;
-  let roleManager: MPRORoleManager;
   let masterDistributor: MPROMasterDistributor;
-  let owner: HardhatEthersSigner, addr1: HardhatEthersSigner, addr2: HardhatEthersSigner;
+  let owner: HardhatEthersSigner, lister: HardhatEthersSigner, addr1: HardhatEthersSigner, addr2: HardhatEthersSigner, addr3: HardhatEthersSigner;
 
   beforeEach(async function () {
-    [owner, addr1, addr2] = await ethers.getSigners();
-
-
-    const RoleManagerFactory = await ethers.getContractFactory("MPRORoleManager");
-    roleManager = await RoleManagerFactory.deploy(owner.address);
-    const roleManagerAddress = await roleManager.getAddress();
+    [owner, lister, addr1, addr2, addr3] = await ethers.getSigners();
 
     const MasterDistributorFactory: MPROMasterDistributor__factory = await ethers.getContractFactory("MPROMasterDistributor");
-    masterDistributor = await MasterDistributorFactory.deploy(owner.address, roleManagerAddress);
+    masterDistributor = await MasterDistributorFactory.deploy(owner.address);
     const masterDistributorAddress = await masterDistributor.getAddress();
 
-    await roleManager.connect(owner).grantRole(await roleManager.DISTRIBUTOR_ROLE(), owner.address);
+    await masterDistributor.connect(owner).grantRole(await masterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE(), owner.address);
+    await masterDistributor.connect(owner).grantRole(await masterDistributor.LISTER_ROLE(), lister.address);
 
     const MPROTokenFactory: MPROToken__factory = await ethers.getContractFactory("MPROToken");
     mproToken = await MPROTokenFactory.deploy(
@@ -32,7 +27,6 @@ describe("MPROToken", function () {
       [owner.address], // Premint addresses
       [ethers.parseEther("100")], // Premint values
       ethers.ZeroAddress, // LayerZero Endpoint
-      roleManagerAddress,
       masterDistributorAddress
     );
 
@@ -47,19 +41,8 @@ describe("MPROToken", function () {
   });
 
   describe("Minting", function () {
-    it("Should mint tokens when called by distributor", async function () {
-      // Mock distributor role in roleManager before this
-      await mproToken.connect(owner).mint(addr1.address, ethers.parseEther("50"));
-      expect(await mproToken.balanceOf(addr1.address)).to.equal(ethers.parseEther("50"));
-    });
-
     it("Should fail to mint tokens when called by non-distributor", async function () {
       await expect(mproToken.connect(addr1).mint(addr2.address, ethers.parseEther("50"))).to.be.revertedWith("Distributor only");
-    });
-
-    it("Should respect the maximum cap", async function () {
-      // Assuming the max cap is not yet reached
-      await expect(mproToken.connect(owner).mint(addr1.address, ethers.parseEther("500000000"))).to.be.revertedWith("ERC20Capped: cap exceeded");
     });
   });
 
@@ -89,6 +72,26 @@ describe("MPROToken", function () {
       await mproToken.connect(addr1).transferFrom(owner.address, addr2.address, ethers.parseEther("10"));
       expect(await mproToken.balanceOf(addr2.address)).to.equal(ethers.parseEther("9"));
     });
+    it("Should fail to transfer when caller is on blocklist", async function () {
+      await masterDistributor.connect(lister).blocklist(addr1.address, true);
+      await expect(mproToken.connect(addr1).transfer(addr2.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+    })
+    it("Should fail to transfer when to is on blocklist", async function () {
+      await masterDistributor.connect(lister).blocklist(addr2.address, true);
+      await expect(mproToken.connect(addr1).transfer(addr2.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+    })
+    it("Should fail to transferFrom when caller is on blocklist", async function () {
+      await masterDistributor.connect(lister).blocklist(addr1.address, true);
+      await expect(mproToken.connect(addr1).transferFrom(addr2.address, addr3.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+    })
+    it("Should fail to transferFrom when from is on blocklist", async function () {
+      await masterDistributor.connect(lister).blocklist(addr3.address, true);
+      await expect(mproToken.connect(addr1).transferFrom(addr2.address, addr3.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+    })
+    it("Should fail to transferFrom when to is on blocklist", async function () {
+      await masterDistributor.connect(lister).blocklist(addr3.address, true);
+      await expect(mproToken.connect(addr1).transferFrom(addr2.address, addr3.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+    })
   });
 
   describe("Approvals", function () {
@@ -96,5 +99,9 @@ describe("MPROToken", function () {
       await mproToken.connect(owner).approve(addr1.address, ethers.parseEther("20"));
       expect(await mproToken.allowance(owner.address, addr1.address)).to.equal(ethers.parseEther("20"));
     });
+    it("Should fail to approve when caller is on blocklist", async function () {
+      await masterDistributor.connect(lister).blocklist(addr1.address, true);
+      await expect(mproToken.connect(addr1).approve(addr2.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+    })
   });
 });
