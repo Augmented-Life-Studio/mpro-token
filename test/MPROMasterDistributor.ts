@@ -46,7 +46,7 @@ describe('MPROMasterDistributor', () => {
 
   describe('Deployment', () => {
     it('Should set the right owner', async () => {
-      expect(await mproMasterDistributor.hasRole(await mproMasterDistributor.OWNER_ROLE(), owner.address)).to.be.true;
+      expect(await mproMasterDistributor.owner()).to.be.equal(owner.address);
     });
     it('Should set the right distributor', async () => {
       expect(await mproMasterDistributor.hasRole(await mproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE(), distributor.address)).to.be.true;
@@ -137,13 +137,13 @@ describe('MPROMasterDistributor', () => {
   })
   describe("setDistributionStartTime function", () => {
     it("Should return error if called by non owner", async () => {
-      await expect(mproMasterDistributor.connect(deployer).setDistributionStartTime(100)).to.be.revertedWith(`AccessControl: account ${deployer.address.toLowerCase()} is missing role ${await mproMasterDistributor.OWNER_ROLE()}`);
+      await expect(mproMasterDistributor.connect(deployer).setDistributionStartTime(100)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should return error when distribution start time is lower that current time", async () => {
       await expect(mproMasterDistributor.connect(owner).setDistributionStartTime(1000)).to.be.revertedWith("MPROMasterDistributor: Distribution start time cannot be lower than current time");
     })
     it("Should return error when function is called by non owner", async () => {
-      await expect(mproMasterDistributor.connect(deployer).setDistributionStartTime(100)).to.be.revertedWith(`AccessControl: account ${deployer.address.toLowerCase()} is missing role ${await mproMasterDistributor.OWNER_ROLE()}`);
+      await expect(mproMasterDistributor.connect(deployer).setDistributionStartTime(100)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should return error when distribution start time is higher than distributionStartTimeDeadline", async () => {
       await expect(mproMasterDistributor.connect(owner).setDistributionStartTime(masterDistributorDeploymentTimestamp + (31 * 24 * 60 * 60))).to.be.revertedWith("MPROMasterDistributor: Distribution start time must be less than distributionStartTimeDeadline");
@@ -175,7 +175,7 @@ describe('MPROMasterDistributor', () => {
   })
   describe("setMPROToken function", () => {
     it("Should return error if called by non owner", async () => {
-      await expect(mproMasterDistributor.connect(deployer).setMPROToken(mproToken.target)).to.be.revertedWith(`AccessControl: account ${deployer.address.toLowerCase()} is missing role ${await mproMasterDistributor.OWNER_ROLE()}`);
+      await expect(mproMasterDistributor.connect(deployer).setMPROToken(mproToken.target)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should set MPRO token", async () => {
       await expect(mproMasterDistributor.connect(owner).setMPROToken(mproToken.target)).to.not.be.reverted;
@@ -194,7 +194,7 @@ describe('MPROMasterDistributor', () => {
   })
   describe("setBurnRate function", () => {
     it("Should return error if called by non owner", async () => {
-      await expect(mproMasterDistributor.connect(deployer).setBurnRate(100)).to.be.revertedWith(`AccessControl: account ${deployer.address.toLowerCase()} is missing role ${await mproMasterDistributor.OWNER_ROLE()}`);
+      await expect(mproMasterDistributor.connect(deployer).setBurnRate(100)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should return error when burn rate is greater than 100", async () => {
       await expect(mproMasterDistributor.connect(owner).setBurnRate(1001)).to.be.revertedWith("MPROMasterDistributor: Burn rate cannot be greater than or equal to 10%");
@@ -205,7 +205,7 @@ describe('MPROMasterDistributor', () => {
   })
   describe("setDistributorTimeAdministratorRoleManager function", () => {
     it("Should return error if called by non owner", async () => {
-      await expect(mproMasterDistributor.connect(deployer).setDistributorTimeAdministratorRoleManager(distributionTimeRoleManager.address)).to.be.revertedWith(`AccessControl: account ${deployer.address.toLowerCase()} is missing role ${await mproMasterDistributor.OWNER_ROLE()}`);
+      await expect(mproMasterDistributor.connect(deployer).setDistributorTimeAdministratorRoleManager(distributionTimeRoleManager.address)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should set distributor time administrator role manager", async () => {
       await expect(mproMasterDistributor.connect(owner).setDistributorTimeAdministratorRoleManager(distributionTimeRoleManager.address)).to.not.be.reverted;
@@ -224,14 +224,14 @@ describe('MPROMasterDistributor', () => {
   })
   describe("grantRole function", () => {
     it("Should return error if called by non owner", async () => {
-      await expect(mproMasterDistributor.connect(deployer).grantRole(await mproMasterDistributor.LISTER_ROLE(), lister.address)).to.be.revertedWith(`AccessControl: account ${deployer.address.toLowerCase()} is missing role ${await mproMasterDistributor.OWNER_ROLE()}`);
+      await expect(mproMasterDistributor.connect(deployer).grantRole(await mproMasterDistributor.LISTER_ROLE(), lister.address)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should return error when role is assigned to blocklisted account", async () => {
       await mproMasterDistributor.connect(lister).blocklist(addrs[0].address, true);
-      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.OWNER_ROLE(), addrs[0].address)).to.be.revertedWith("Action on blocklisted account");
+      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.LISTER_ROLE(), addrs[0].address)).to.be.revertedWith("Action on blocklisted account");
     })
     it("Should return error when role is assigned to address zero", async () => {
-      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.OWNER_ROLE(), ethers.ZeroAddress)).to.be.revertedWith("Action on address zero");
+      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.LISTER_ROLE(), ethers.ZeroAddress)).to.be.revertedWith("Action on address zero");
     })
     it("Should return error when role is assigned more then once", async () => {
       await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER(), addrs[0].address)
@@ -243,7 +243,7 @@ describe('MPROMasterDistributor', () => {
   })
   describe("revokeRole function", () => {
     it("Should return error if called by non owner", async () => {
-      await expect(mproMasterDistributor.connect(deployer).revokeRole(await mproMasterDistributor.LISTER_ROLE(), lister.address)).to.be.revertedWith(`AccessControl: account ${deployer.address.toLowerCase()} is missing role ${await mproMasterDistributor.OWNER_ROLE()}`);
+      await expect(mproMasterDistributor.connect(deployer).revokeRole(await mproMasterDistributor.LISTER_ROLE(), lister.address)).to.be.revertedWith('Ownable: caller is not the owner');
     })
     it("Should return error when role is revoked from address zero", async () => {
       await expect(mproMasterDistributor.connect(owner).revokeRole(await mproMasterDistributor.LISTER_ROLE(), ethers.ZeroAddress)).to.be.revertedWith("Action on address zero");

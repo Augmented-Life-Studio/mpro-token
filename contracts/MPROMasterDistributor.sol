@@ -2,6 +2,7 @@
 pragma solidity ^0.8.8;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -20,7 +21,7 @@ interface IMPROToken is IERC20 {
  * Role-based access control allows specific roles to perform authorized actions within the contract,
  * ensuring proper governance and security.
  */
-contract MPROMasterDistributor is Context, AccessControl {
+contract MPROMasterDistributor is Context, AccessControl, Ownable {
     using SafeMath for uint256;
 
     /**
@@ -48,7 +49,6 @@ contract MPROMasterDistributor is Context, AccessControl {
      */
     uint256 constant SECONDS_PER_DAY = 86400;
 
-    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant MPRO_MASTER_DISTRIBUTOR_ROLE =
         keccak256("MPRO_MASTER_DISTRIBUTOR_ROLE");
     bytes32 public constant DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE =
@@ -273,7 +273,7 @@ contract MPROMasterDistributor is Context, AccessControl {
         distributionStartTimestampDeadLine = block.timestamp + 30 days;
         // Assign the OWNER_ROLE to the provided owner address. This role typically includes
         // elevated privileges and is crucial for contract administration and oversight.
-        _grantRole(OWNER_ROLE, _owner);
+        _transferOwnership(_owner);
     }
 
     /**
@@ -454,9 +454,7 @@ contract MPROMasterDistributor is Context, AccessControl {
      *
      * @param _startTime The proposed start time for token distribution, specified as a timestamp.
      */
-    function setDistributionStartTime(
-        uint256 _startTime
-    ) external onlyRole(OWNER_ROLE) {
+    function setDistributionStartTime(uint256 _startTime) external onlyOwner {
         require(
             _startTime > block.timestamp,
             "MPROMasterDistributor: Distribution start time cannot be lower than current time"
@@ -520,9 +518,7 @@ contract MPROMasterDistributor is Context, AccessControl {
      * @param _mproTokenAddress The address of the new MPRO token contract to be set. This address
      *                          should point to a contract that conforms to the IMPROToken interface.
      */
-    function setMPROToken(
-        address _mproTokenAddress
-    ) external onlyRole(OWNER_ROLE) {
+    function setMPROToken(address _mproTokenAddress) external onlyOwner {
         mproToken = IMPROToken(_mproTokenAddress);
     }
 
@@ -578,7 +574,7 @@ contract MPROMasterDistributor is Context, AccessControl {
      * @param _burnRate The new burn rate to be set, scaled by a factor of 100. For example, to set a
      *                 burn rate of 1%, `_burnFee` should be 10.
      */
-    function setBurnRate(uint256 _burnRate) external onlyRole(OWNER_ROLE) {
+    function setBurnRate(uint256 _burnRate) external onlyOwner {
         require(
             _burnRate <= 1000,
             "MPROMasterDistributor: Burn rate cannot be greater than or equal to 10%"
@@ -605,7 +601,7 @@ contract MPROMasterDistributor is Context, AccessControl {
      */
     function setDistributorTimeAdministratorRoleManager(
         address _roleManagerAddress
-    ) external onlyRole(OWNER_ROLE) {
+    ) external onlyOwner {
         _grantRole(
             DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER,
             _roleManagerAddress
@@ -672,7 +668,7 @@ contract MPROMasterDistributor is Context, AccessControl {
         public
         virtual
         override
-        onlyRole(OWNER_ROLE)
+        onlyOwner
         notBlocklisted(_account)
         notZeroAddress(_account)
     {
@@ -712,7 +708,7 @@ contract MPROMasterDistributor is Context, AccessControl {
     function revokeRole(
         bytes32 role,
         address _account
-    ) public override onlyRole(OWNER_ROLE) notZeroAddress(_account) {
+    ) public override onlyOwner notZeroAddress(_account) {
         assignedRoles[role] = false;
         _revokeRole(role, _account);
     }
@@ -753,7 +749,9 @@ contract MPROMasterDistributor is Context, AccessControl {
         bool _blocklist
     ) external onlyRole(LISTER_ROLE) notZeroAddress(_account) {
         if (
-            isOwner(_account) || isLister(_account) || isDistributor(_account)
+            this.owner() == _account ||
+            isLister(_account) ||
+            isDistributor(_account)
         ) {
             revert("Account has a role and cannot be blocklisted");
         }
@@ -796,10 +794,6 @@ contract MPROMasterDistributor is Context, AccessControl {
 
     function isLister(address _account) public view returns (bool) {
         return hasRole(LISTER_ROLE, _account);
-    }
-
-    function isOwner(address _account) public view returns (bool) {
-        return hasRole(OWNER_ROLE, _account);
     }
 
     function isDistributor(address _address) public view returns (bool) {
