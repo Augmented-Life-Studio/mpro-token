@@ -241,6 +241,14 @@ describe('MPROMasterDistributor', () => {
     it("Should grant role", async () => {
       await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER(), lister.address)).to.not.be.reverted;
     })
+    it("Should block adding role to multiple accounts", async () => {
+      await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER(), addrs[0].address)
+      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER(), addrs[1].address)).to.be.revertedWith("Role already granted to another account");
+    })
+    it("Should block adding role to multiple accounts when is revoked on different account", async () => {
+      await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER(), addrs[0].address)
+      await expect(mproMasterDistributor.connect(owner).revokeRole(await mproMasterDistributor.DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER(), addrs[2].address)).to.be.revertedWith("Account does not have role");
+    })
   })
   describe("revokeRole function", () => {
     it("Should return error if called by non owner", async () => {
