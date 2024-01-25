@@ -6,6 +6,7 @@ export async function verifyContractWithRetry(contract: string, contractAddress:
     do {
         try {
             const response = await hre!.run("verify:verify", {
+                contract: contract,
                 address: contractAddress,
                 constructorArguments: constructorArguments,
             })
