@@ -719,6 +719,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         bytes32 role,
         address _account
     ) public override onlyOwner notZeroAddress(_account) {
+        require(hasRole(role, _account), "Account does not have role");
         assignedRoles[role] = false;
         _revokeRole(role, _account);
     }

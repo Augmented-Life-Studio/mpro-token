@@ -9,24 +9,65 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract MPROVesting is Context, Ownable {
     using SafeMath for uint256;
 
-    uint256 public constant UNLOCK_PERCENT_DIVIDER = 10000;
+    /**
+     * @dev Constant representing the divider for percentage values. This is used to convert percentage values
+     * to their decimal representation. For example, a value of 10000 represents 100%.
+     */
+    uint256 private constant UNLOCK_PERCENT_DIVIDER = 10000;
+
+    /**
+     * @dev Struct representing a beneficiary of the vesting contract. Each beneficiary is associated with
+     * a specific amount of tokens and a claimable amount of tokens. The `amount` field represents the total
+     * amount of tokens allocated to the beneficiary. The `claimed` field represents the amount of tokens that
+     * the beneficiary has already claimed from their allocation.
+     */
     struct VestingBeneficiary {
         uint256 amount;
         uint256 claimed;
     }
 
+    /**
+     * @dev The ERC20 token address which is being vested in this contract.
+     */
     address public immutable token;
-
+    /**
+     * @dev Mapping of beneficiary addresses to their respective vesting data.
+     */
     mapping(address => VestingBeneficiary) private vestingBeneficiaries;
+    /**
+     * @dev The timestamp deadline after which the TGE unlock timestamp cannot be updated.
+     */
     uint256 private immutable tgeUnlockTimestampDeadline;
-    uint256 public immutable tgeUnlockTimestamp;
+    /**
+     * @dev The timestamp after which tokens begin to unlock.
+     */
+    uint256 public tgeUnlockTimestamp;
+    /**
+     * @dev The percentage of tokens to be unlocked at TGE (Token Generation Event).
+     */
     uint256 public immutable tgeUnlockPercent;
-
-    uint256 public immutable cliffTimestamp;
-
+    /**
+     * @dev The timestamp after which tokens begin to vest.
+     */
+    uint256 public cliffTimestamp;
+    /**
+     * @dev The percentage of tokens to be unlocked per vesting period.
+     */
     uint256 public immutable vestingUnlockPercentPerPeriod;
+    /**
+     * @dev The duration of each vesting period in seconds.
+     */
     uint256 public immutable vestingPeriodDuration;
 
+    /**
+     * @dev Modifier that restricts function access to only beneficiaries of the vesting contract.
+     * This modifier checks if the specified account is a beneficiary by verifying that the account has
+     * a non-zero allocation of tokens for vesting. If the account does not have an allocation, the function
+     * call is reverted with an error message. This ensures that only accounts with vested tokens can access
+     * certain functions, such as claiming vested tokens.
+     *
+     * @param _account The address of the account to check for beneficiary status.
+     */
     modifier onlyBeneficiary(address _account) {
         require(
             vestingBeneficiaries[_account].amount > 0,
@@ -35,6 +76,31 @@ contract MPROVesting is Context, Ownable {
         _;
     }
 
+    event SetTgeUnlockTimestamp(uint256 _timestamp);
+    event RegisterBeneficiaries(address[] _beneficiaries, uint256[] _amounts);
+    event Claim(address _beneficiary, uint256 _amount);
+
+    /**
+     * @dev Constructor for the MPROVesting contract. Initializes the contract with necessary parameters
+     * for token vesting. Sets the token address, Token Generation Event (TGE) unlock timestamp and percent,
+     * cliff delay, vesting percent per period, vesting period duration, and the contract owner.
+     *
+     * The TGE unlock timestamp defines when the initial unlock of tokens occurs, and the TGE unlock percent
+     * specifies the percentage of tokens unlocked at TGE. The cliff delay sets a period after TGE during which
+     * no tokens are vested. The vesting unlock percent per period and the vesting period duration define the
+     * rate and frequency at which tokens are vested after the cliff period.
+     *
+     * Ownership of the contract is transferred to `_newOwner` to allow management of vesting parameters and
+     * beneficiaries.
+     *
+     * @param _token The ERC20 token address which is being vested in this contract.
+     * @param _tgeUnlockTimestamp The timestamp for the initial unlock of tokens (TGE).
+     * @param _tgeUnlockPercent The percentage of total tokens to be unlocked at TGE.
+     * @param _cliffDelay The delay after TGE during which no tokens are vested.
+     * @param _vestingUnlockPercentPerPeriod The percentage of tokens to be vested per vesting period.
+     * @param _vestingPeriodDuration The duration of each vesting period in seconds.
+     * @param _newOwner The address that will be granted ownership of the contract.
+     */
     constructor(
         address _token,
         uint256 _tgeUnlockTimestamp,
@@ -45,7 +111,7 @@ contract MPROVesting is Context, Ownable {
         address _newOwner
     ) {
         token = _token;
-        tgeUnlockTimestampDeadline = _tgeUnlockTimestamp + 30 days;
+        tgeUnlockTimestampDeadline = block.timestamp + 30 days;
         tgeUnlockTimestamp = _tgeUnlockTimestamp;
         tgeUnlockPercent = _tgeUnlockPercent;
         cliffTimestamp = tgeUnlockTimestamp + _cliffDelay;
@@ -59,6 +125,38 @@ contract MPROVesting is Context, Ownable {
      */
     receive() external payable virtual {}
 
+    /**
+     * @dev Sets the TGE (Token Generation Event) unlock timestamp. This function allows the contract owner
+     * to set the timestamp indicating when tokens begin to unlock for beneficiaries. It enforces that the new
+     * timestamp is greater than the current time and less than a predefined deadline. Adjusts the `cliffTimestamp`
+     * accordingly to maintain the delay period. Emits a `SetTgeUnlockTimestamp` event upon successful update.
+     *
+     * @param _timestamp The new TGE unlock timestamp.
+     */
+    function setTgeUnlockTimestamp(uint256 _timestamp) external onlyOwner {
+        require(
+            _timestamp > block.timestamp,
+            "Vesting: TGE unlock time cannot be lower than current time"
+        );
+        require(
+            _timestamp <= tgeUnlockTimestampDeadline,
+            "Vesting: TGE unlock time must be less than tgeUnlockTimestampDeadline"
+        );
+
+        cliffTimestamp = _timestamp + (cliffTimestamp - tgeUnlockTimestamp);
+        tgeUnlockTimestamp = _timestamp;
+        emit SetTgeUnlockTimestamp(_timestamp);
+    }
+
+    /**
+     * @dev Registers multiple beneficiaries for vesting. Each beneficiary is associated with a specific
+     * amount of tokens. This function can only be called by the contract owner. It validates the input arrays
+     * for proper length and non-zero addresses. Updates the `vestingBeneficiaries` mapping with the provided
+     * data. Emits `RegisterBeneficiaries` event upon successful registration.
+     *
+     * @param _beneficiaries Array of beneficiary addresses.
+     * @param _amounts Array of token amounts corresponding to each beneficiary.
+     */
     function registerBeneficiaries(
         address[] memory _beneficiaries,
         uint256[] memory _amounts
@@ -71,8 +169,15 @@ contract MPROVesting is Context, Ownable {
             if (_beneficiaries[i] == address(0)) {
                 revert("Vesting: Invalid beneficiary");
             }
-            if (vestingBeneficiaries[_beneficiaries[i]].amount > 0) {
-                vestingBeneficiaries[_beneficiaries[i]].amount = _amounts[i];
+            VestingBeneficiary storage beneficiary = vestingBeneficiaries[
+                _beneficiaries[i]
+            ];
+            if (beneficiary.amount > 0) {
+                if (beneficiary.claimed > beneficiary.amount) {
+                    beneficiary.amount = beneficiary.claimed;
+                } else {
+                    beneficiary.amount = _amounts[i];
+                }
             } else {
                 vestingBeneficiaries[_beneficiaries[i]] = VestingBeneficiary(
                     _amounts[i],
@@ -80,10 +185,15 @@ contract MPROVesting is Context, Ownable {
                 );
             }
         }
+        emit RegisterBeneficiaries(_beneficiaries, _amounts);
     }
 
     /**
-     * @dev Returns the amount of tokens owned by `account`.
+     * @dev Returns the claimable balance of tokens for the caller. This function calculates the balance by
+     * subtracting the already claimed tokens from the total allocated amount for the caller. It can only be
+     * called by a beneficiary of the vesting contract.
+     *
+     * @return The amount of tokens that the caller can claim.
      */
     function claimBalance()
         public
@@ -97,6 +207,13 @@ contract MPROVesting is Context, Ownable {
             vestingBeneficiaries[_msgSender()].claimed;
     }
 
+    /**
+     * @dev Returns the amount of tokens already claimed by the caller. This function is accessible only to
+     * beneficiaries of the contract and provides an easy way to track the amount of tokens they have already
+     * withdrawn from their allocated amount.
+     *
+     * @return The amount of tokens already claimed by the caller.
+     */
     function claimed()
         public
         view
@@ -107,6 +224,15 @@ contract MPROVesting is Context, Ownable {
         return vestingBeneficiaries[_msgSender()].claimed;
     }
 
+    /**
+     * @dev Calculates the amount of tokens that a beneficiary is eligible to claim at the current time.
+     * This function considers the TGE unlock timestamp, the cliff period, and the vesting schedule to compute
+     * the claimable amount. It returns zero if the current time is before the TGE unlock timestamp, and calculates
+     * the tokens available based on the vesting schedule otherwise.
+     *
+     * @param _beneficiary The address of the beneficiary whose claimable amount is to be calculated.
+     * @return The amount of tokens the beneficiary is currently eligible to claim.
+     */
     function enableForRelease(
         address _beneficiary
     ) public view returns (uint256) {
@@ -147,7 +273,10 @@ contract MPROVesting is Context, Ownable {
     }
 
     /**
-     * @dev Claim tokens for the beneficiary.
+     * @dev Allows a beneficiary to claim their vested tokens. This function checks if the current time is past
+     * the TGE unlock timestamp and if there are tokens available for release. Updates the claimed amount in the
+     * `vestingBeneficiaries` mapping and transfers the eligible tokens to the caller. Emits a `Claim` event upon
+     * successful transfer of tokens.
      */
     function claim() external virtual onlyBeneficiary(_msgSender()) {
         require(
@@ -163,5 +292,6 @@ contract MPROVesting is Context, Ownable {
             _msgSender(),
             tokensEnableForRelease
         );
+        emit Claim(_msgSender(), tokensEnableForRelease);
     }
 }

@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, network } from "hardhat";
 import { mine } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { MPROToken, MPROToken__factory, MPROMasterDistributor, MPROMasterDistributor__factory, MPROVesting, ERC20, MPROVesting__factory, ERC20__factory, WhoaToken__factory } from "../typechain-types";
+import { MPROVesting, ERC20, MPROVesting__factory, WhoaToken__factory } from "../typechain-types";
 
 // npx hardhat test test/MPROVesting.ts
 
@@ -17,7 +17,7 @@ describe("MPROVesting", function () {
     let CLIFF_DELAY: number
     const TGE_UNLOCK_PERCENT: number = 1000
     const VESTING_UNLOCK_PERCENT = 1000
-    let UNLOCK_PERCENT_DIVIDER: number
+    const UNLOCK_PERCENT_DIVIDER = 10000
 
     const getTgeUnlockAmount = (amount: number) => amount * TGE_UNLOCK_PERCENT / UNLOCK_PERCENT_DIVIDER;
     const getVestingUnlockAmount = (amount: number, vestingPeriod: number) => (amount * VESTING_UNLOCK_PERCENT / UNLOCK_PERCENT_DIVIDER) * vestingPeriod;
@@ -49,8 +49,6 @@ describe("MPROVesting", function () {
             ONE_DAY,
             deployer.address
         );
-
-        UNLOCK_PERCENT_DIVIDER = Number((await mproVesting.UNLOCK_PERCENT_DIVIDER()).toString());
 
         await erc20.connect(deployer).transfer(mproVesting.target, ethers.parseUnits("100000"));
         expect(await erc20.balanceOf(mproVesting.target)).to.equal(ethers.parseUnits("100000"));
