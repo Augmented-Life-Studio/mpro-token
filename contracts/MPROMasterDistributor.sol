@@ -103,7 +103,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * Being a private variable, it can only be accessed and modified by functions within this
      * contract, providing a controlled and secure way to manage the start of the distribution phase.
      */
-    uint256 private distributionStartTimestamp;
+    uint256 public distributionStartTimestamp;
 
     /**
      * @dev Private immutable variable representing the deadline for the distribution start timestamp.
@@ -153,7 +153,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * These configurations determine when and how the daily distribution amount of tokens changes
      * over time, allowing for flexibility in managing token distribution within the contract.
      */
-    DistributionReduction[] public distributionReductions;
+    DistributionReduction[] private distributionReductions;
 
     /**
      * @dev Public variable representing the burn rate for tokens.
@@ -213,8 +213,9 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         }
 
         require(
-            _reductionTimestamp > lastReduction.reductionTimestamp,
-            "MPROMasterDistributor: New reduction start time cannot be lower than last redution timestamp"
+            _reductionTimestamp >
+                lastReduction.reductionTimestamp + SECONDS_PER_DAY,
+            "MPROMasterDistributor: New reduction start time cannot be lower than last redution timestamp + 1 day"
         );
         require(
             _reductionTimestamp >= lastReduction.reductionTimestamp + 183 days,
@@ -938,5 +939,13 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         );
 
         return true;
+    }
+
+    function getDistributionReductions()
+        external
+        view
+        returns (DistributionReduction[] memory)
+    {
+        return distributionReductions;
     }
 }

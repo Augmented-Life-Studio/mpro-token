@@ -52,6 +52,9 @@ describe('MPROMasterDistributor', () => {
     it('Should set the right distributor', async () => {
       expect(await mproMasterDistributor.hasRole(await mproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE(), distributor.address)).to.be.true;
     });
+    it("Should set proper distributionStartTimestamp", async () => {
+      expect(await mproMasterDistributor.distributionStartTimestamp()).to.equal(initialDistributionStartTime);
+    })
   })
   describe("getAllTokenDistribution function", () => {
     it("Should return the right amount of tokens before distribution starts", async () => {
@@ -172,6 +175,13 @@ describe('MPROMasterDistributor', () => {
     })
     it("Should add distribution reduction called by distributions time administator", async () => {
       await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * 24 * 60 * 60), ethers.parseUnits("240000"))).to.not.be.reverted;
+    })
+    it("Should return distribution reductions", async () => {
+      await mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * 24 * 60 * 60), ethers.parseUnits("240000"));
+      const distributionReductions = await mproMasterDistributor.getDistributionReductions();
+      expect(distributionReductions.length).to.equal(1);
+      expect(distributionReductions[0][0]).to.equal(initialDistributionStartTime + (183 * 24 * 60 * 60));
+      expect(distributionReductions[0][1]).to.equal(ethers.parseUnits("240000"));
     })
   })
   describe("setMPROToken function", () => {
