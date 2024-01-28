@@ -51,10 +51,10 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
 
     bytes32 public constant MPRO_MASTER_DISTRIBUTOR_ROLE =
         keccak256("MPRO_MASTER_DISTRIBUTOR_ROLE");
-    bytes32 public constant DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE =
-        keccak256("DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE");
-    bytes32 public constant DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER =
-        keccak256("DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER");
+    bytes32 public constant DISTRIBUTIONS_ADMINISTRATOR_ROLE =
+        keccak256("DISTRIBUTIONS_ADMINISTRATOR_ROLE");
+    bytes32 public constant DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER =
+        keccak256("DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER");
     bytes32 public constant LISTER_ROLE = keccak256("LISTER_ROLE");
 
     IMPROToken private mproToken;
@@ -140,7 +140,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * The value is expressed in the contract's token decimals, and it remains constant throughout
      * the contract's lifetime.
      */
-    uint256 private constant initialDaylyDistribution = 250_000 * 10 ** 18;
+    uint256 public constant initialDaylyDistribution = 250_000 * 10 ** 18;
 
     /**
      * @dev Public array to store distribution reduction configurations.
@@ -195,6 +195,21 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     );
     event SetDistributorTimeAdministratorRole(address _roleManagerAddress);
 
+    /**
+     * @dev Modifier that enforces rules for reduction in distribution. It ensures that a new distribution
+     * reduction can only be set after a certain period from the last reduction, and the new reduction amount
+     * must be within specific limits compared to the last reduction amount.
+     *
+     * The modifier checks against the last entry in the `distributionReductions` array (if it exists) to
+     * enforce the following:
+     * 1. The new reduction timestamp must be at least 183 days after the last reduction's timestamp.
+     * 2. The new daily distribution amount must not be more than half of the last reduction's daily distribution.
+     *
+     * This ensures a controlled and limited reduction of distribution over time.
+     *
+     * @param _reductionTimestamp The timestamp when the new reduction is intended to start.
+     * @param _reductionAmount The new daily distribution amount after the reduction.
+     */
     modifier reductionEnabled(
         uint256 _reductionTimestamp,
         uint256 _reductionAmount
@@ -212,11 +227,6 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
             );
         }
 
-        require(
-            _reductionTimestamp >
-                lastReduction.reductionTimestamp + SECONDS_PER_DAY,
-            "MPROMasterDistributor: New reduction start time cannot be lower than last redution timestamp + 1 day"
-        );
         require(
             _reductionTimestamp >= lastReduction.reductionTimestamp + 183 days,
             "MPROMasterDistributor: New redution start time cannot be lower than 183 days after last redution timestamp"
@@ -240,7 +250,10 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * If the address is not blocklisted, the modified function or operation is executed as intended.
      */
     modifier notBlocklisted(address _account) {
-        require(!blocklisted[_account], "Action on blocklisted account");
+        require(
+            !blocklisted[_account],
+            "MPROMasterDistributor: Action on blocklisted account"
+        );
         _;
     }
 
@@ -256,20 +269,57 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * If the address is valid (not zero), the modified function or operation is executed.
      */
     modifier notZeroAddress(address _account) {
-        require(_account != address(0), "Action on address zero");
+        require(
+            _account != address(0),
+            "MPROMasterDistributor: Action on address zero"
+        );
         _;
     }
 
     /**
-     * @dev Constructor for initializing the contract with specific parameters.
+     * @dev Modifier that ensures a role has not already been assigned to an account. This modifier checks
+     * the status of a role in the `assignedRoles` mapping. If the role has already been granted (i.e., the
+     * corresponding value in the mapping is `true`), the function call is reverted with an error message.
+     * This is used to prevent roles from being granted to more than one account, ensuring unique assignment
+     * of responsibilities or permissions within the contract.
      *
-     * This constructor is responsible for setting up the initial state of the contract, including
-     * the assignment of the owner role and configuring the role management contract. It also initializes
-     * the timestamps for the start and deadline of the distribution period.
+     * @param _role The bytes32 identifier of the role to check.
+     */
+    modifier notGranted(bytes32 _role) {
+        require(
+            !assignedRoles[_role],
+            "MPROMasterDistributor: Role already granted to another account"
+        );
+        _;
+    }
+
+    /**
+     * @dev Modifier that checks if a role has not been marked as burned. A role is considered burned if
+     * it has been explicitly revoked and cannot be reassigned. This is typically done by assigning the role
+     * to the zero address. The modifier uses the `hasRole` function to check the status of the role.
+     * If the role is found to be assigned to the zero address, indicating that it has been burned, the
+     * function call is reverted with an error message. This prevents operations on roles that are meant to
+     * be permanently inactive or revoked.
      *
-     * @param _owner The address that will be granted the owner role. This address will have
-     *               administrative control over certain functions of the contract, typically including
-     *               key management and operational parameters.
+     * @param _role The bytes32 identifier of the role to check.
+     */
+    modifier notBurned(bytes32 _role) {
+        require(
+            !hasRole(_role, address(0)),
+            "MPROMasterDistributor: Role is already burned"
+        );
+        _;
+    }
+
+    /**
+     * @dev Constructor for the contract. Initializes the contract by setting the distribution start timestamp,
+     * the distribution deadline, and assigning the OWNER_ROLE to the provided owner address. The distribution
+     * start timestamp is set to 14 days from the current block time, providing a preparation period before the
+     * distribution begins. The distribution deadline is set to 30 days from the current block time, creating a
+     * finite period for the distribution process. The OWNER_ROLE is crucial for contract administration and
+     * oversight, allowing the owner to manage the contract's key operations.
+     *
+     * @param _owner The address that will be assigned the OWNER_ROLE, granting administrative control over the contract.
      */
     constructor(address _owner) {
         // Set the distribution start timestamp to 14 days from the current block time.
@@ -284,35 +334,27 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     }
 
     /**
-     * @dev Calculates the total token distribution since the start of the distribution period.
+     * @dev Calculates the total token distribution based on the initial daily distribution, the elapsed time,
+     * and any distribution reductions that have been set. The function first checks if the current timestamp
+     * is past the distribution start timestamp. If not, it returns 0, indicating that distribution has not
+     * started yet. If the distribution has started, it calculates the total distribution by taking into
+     * account the initial daily distribution and adjusting it based on any reductions that have occurred
+     * since the start of the distribution.
      *
-     * This function computes the cumulative amount of tokens distributed since the
-     * `distributionStartTimestamp`. The distribution amount may vary over different time periods,
-     * as defined by the entries in the `distributionReductions` array. Each entry in this array
-     * specifies a reduction in the daily distribution rate starting from a particular timestamp.
+     * The function iterates through each distribution reduction, checks if the current timestamp is greater
+     * than the reduction timestamp, and, if so, calculates the distribution for the time period since the last
+     * reduction. It updates the total distribution accordingly. The total distribution also includes the
+     * distribution for the period from the start timestamp until the first reduction or the current time,
+     * whichever comes first.
      *
-     * The calculation is performed as follows:
-     * - If the current block timestamp is before `distributionStartTimestamp`, the function returns 0,
-     *   indicating that the distribution period has not yet started.
-     * - It calculates the total number of days elapsed since `distributionStartTimestamp`.
-     * - For each entry in `distributionReductions`, it determines the number of days within the
-     *   respective period and accumulates the total distribution based on the daily distribution rate
-     *   for that period.
-     * - The function finally accounts for the remaining days using the `initialDaylyDistribution` rate.
-     *
-     * Note: The function assumes that `distributionReductions` are sorted in descending order of their
-     * timestamps, and the `daylyDistribution` values represent the reduced distribution rates
-     * applicable after each respective timestamp.
-     *
-     * @return totalDistribution The total amount of tokens distributed since the start of the
-     *         distribution period up to the current time.
+     * @return The total token distribution up to the current block timestamp.
      */
     function getAllTokenDistribution() public view returns (uint256) {
         if (block.timestamp < distributionStartTimestamp) {
             return 0;
         }
 
-        uint256 totalDistribution = 0;
+        uint256 totalDistribution = initialDaylyDistribution;
         // Time periods since last distribution
         uint256 timeElapsed = block.timestamp - distributionStartTimestamp;
         uint256 daysElapsed = timeElapsed / SECONDS_PER_DAY;
@@ -324,41 +366,38 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         ) {
             DistributionReduction
                 memory distributionReduction = distributionReductions[index];
-            uint daysElapsedToReduction = (block.timestamp -
-                distributionReduction.reductionTimestamp) / SECONDS_PER_DAY;
-            if (daysElapsed >= daysElapsedToReduction) {
-                // Days in current period
-                uint256 daysInCurrentPeriod = daysElapsed -
-                    daysElapsedToReduction;
+
+            // Check if the current timestamp is greater than the reduction timestamp
+            if (block.timestamp >= distributionReduction.reductionTimestamp) {
+                // Calculate the number of days in the current period
+                uint256 daysInCurrentPeriod = (block.timestamp -
+                    distributionReduction.reductionTimestamp) / SECONDS_PER_DAY;
                 totalDistribution +=
                     distributionReduction.daylyDistribution +
                     (daysInCurrentPeriod *
                         distributionReduction.daylyDistribution);
                 // Update daysElapsed for previous period
-                daysElapsed = daysElapsedToReduction;
+                daysElapsed -= daysInCurrentPeriod;
             }
         }
-        // Remaining days are in the first period
-        totalDistribution +=
-            initialDaylyDistribution +
-            (daysElapsed * initialDaylyDistribution);
+
+        totalDistribution += daysElapsed * initialDaylyDistribution;
 
         return totalDistribution;
     }
 
     /**
-     * @dev Calculates the quantity of tokens currently available for distribution.
+     * @dev Calculates the quantity of tokens that are available for distribution at the current time.
+     * It determines this quantity by subtracting the total number of tokens already distributed
+     * (`distributedTokens`) from the total number of tokens that should have been distributed up to the
+     * current point in time (`getAllTokenDistribution`). This function provides insight into the remaining
+     * token balance that is available for distribution, ensuring that the distribution does not exceed
+     * the planned amount at any given point.
      *
-     * This function determines the amount of tokens that are available to be distributed at the
-     * current moment. It calculates this by subtracting the already distributed tokens
-     * (`distributedTokens`) from the total amount of tokens that have been allocated for distribution
-     * up to the current time (`getAllTokenDistribution`).
+     * Note that this is a private function and can only be called within the contract itself. This function
+     * is typically used internally to manage and track the distribution process accurately.
      *
-     * The function is marked as private and can only be called within the contract itself. This
-     * encapsulation ensures that the logic for calculating the available tokens for distribution
-     * is controlled and not exposed externally.
-     *
-     * @return The quantity of tokens that are available for distribution.
+     * @return The quantity of tokens that are currently available for distribution.
      */
     function getAvailableForDistributionTokenQuantity()
         private
@@ -443,25 +482,28 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     }
 
     /**
-     * @dev Sets the start time for token distribution.
+     * @dev Sets a new distribution start time.
      *
-     * This external function allows an account with the OWNER_ROLE to set the start time for the
-     * token distribution. It includes checks to ensure that the new start time is valid and within
-     * the allowed range.
+     * This function allows the contract owner to set a new start time
+     * for the token distribution process. It ensures that the new start time is in the future, has not yet been
+     * surpassed, and is before the predefined distribution start timestamp deadline. This function can only be
+     * called if the distribution has not yet started (i.e., no tokens have been distributed).
      *
-     * The function performs the following validations:
-     * - The proposed start time (`_startTime`) must be in the future, i.e., greater than the current
-     *   block timestamp. This ensures that the distribution cannot be set to start in the past.
-     * - The `_startTime` must also be less than or equal to `distributionStartTimestampDeadLine`,
-     *   which is a predefined deadline for when distribution can start. This ensures that the
-     *   distribution starts within the planned timeframe.
+     * The function includes checks to ensure:
+     * 1. The distribution has not yet started (`distributedTokens` must be 0).
+     * 2. The new start time (`_startTime`) is in the future (greater than the current `block.timestamp`).
+     * 3. The new start time does not exceed the predefined deadline (`distributionStartTimestampDeadLine`).
      *
-     * If these conditions are met, the function updates `distributionStartTimestamp` with the new
-     * start time, effectively scheduling the start of the token distribution process.
+     * If all conditions are met, the function updates the `distributionStartTimestamp` and emits a
+     * `SetDistribiutionStartTime` event with the new start time.
      *
-     * @param _startTime The proposed start time for token distribution, specified as a timestamp.
+     * @param _startTime The new start time for token distribution.
      */
     function setDistributionStartTime(uint256 _startTime) external onlyOwner {
+        require(
+            distributedTokens == 0,
+            "MPROMasterDistributor: Distribution start time cannot be changed after distribution has started"
+        );
         require(
             _startTime > block.timestamp,
             "MPROMasterDistributor: Distribution start time cannot be lower than current time"
@@ -479,7 +521,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     /**
      * @dev Adds a new distribution reduction to the contract.
      *
-     * This external function allows an account with the DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE to add a
+     * This external function allows an account with the DISTRIBUTIONS_ADMINISTRATOR_ROLE to add a
      * new distribution reduction. A distribution reduction is a record that signifies a change in the
      * distribution amount of tokens from a specific timestamp.
      *
@@ -500,7 +542,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         uint256 _reductionAmount
     )
         external
-        onlyRole(DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE)
+        onlyRole(DISTRIBUTIONS_ADMINISTRATOR_ROLE)
         reductionEnabled(_redutionTimestamp, _reductionAmount)
     {
         distributionReductions.push(
@@ -511,21 +553,24 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     }
 
     /**
-     * @dev Sets the address of the MPRO token contract.
+     * @dev Sets the address of the MPRO token contract. This function allows the contract owner to set or
+     * update the address of the MPRO token contract to be used in the distribution. It includes a check to ensure
+     * that the MPRO token address is not already set, preventing accidental overwriting of the token address.
      *
-     * This external function allows an account with the OWNER_ROLE to set or update the address of
-     * the MPRO token contract. The function updates the `mproToken` state variable, which is expected
-     * to be of type IMPROToken, an interface for the MPRO token.
+     * This is a critical function as it establishes the link to the MPRO token that will be distributed by this
+     * contract. The function can only be successfully called once, as the MPRO token address is intended to be
+     * immutable once set to prevent unauthorized changes.
      *
-     * It is crucial to ensure that the provided `_mproTokenAddress` is correct and trustworthy, as
-     * setting an incorrect or malicious address could have significant implications on the contract's
-     * functionality and security. The function can only be executed by an account that has been
-     * granted the OWNER_ROLE, ensuring that only authorized users can change the token address.
+     * If the token address has not been set before, the function updates the `mproToken` state variable and emits
+     * a `SetMPROToken` event with the new MPRO token address.
      *
-     * @param _mproTokenAddress The address of the new MPRO token contract to be set. This address
-     *                          should point to a contract that conforms to the IMPROToken interface.
+     * @param _mproTokenAddress The address of the MPRO token contract to be set.
      */
     function setMPROToken(address _mproTokenAddress) external onlyOwner {
+        require(
+            mproToken == IMPROToken(address(0)),
+            "MPROMasterDistributor: MPRO token is already set"
+        );
         mproToken = IMPROToken(_mproTokenAddress);
         emit SetMPROToken(_mproTokenAddress);
     }
@@ -592,88 +637,99 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     }
 
     /**
-     * @dev Assigns the DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER role to a specified address.
+     * @dev Assigns the DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER role to a specified address. This function
+     * allows the contract owner to delegate the management of distribution time administrators to a specific
+     * account. This is crucial for decentralized management and control over the distribution process.
      *
-     * This function is designed to manage role-based access control specifically for the
-     * DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER. It allows an account with the OWNER_ROLE to
-     * assign the DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER role to a new address. This role is
-     * likely to be associated with permissions to manage distribution timing and related parameters
-     * in the contract.
+     * The function includes checks to ensure:
+     * 1. The role has not been burned (permanently deactivated).
+     * 2. The role has not already been granted to another account.
      *
-     * The OWNER_ROLE is required to execute this function, ensuring that only an authorized user can
-     * change the role manager for distribution time administration. This helps maintain the security
-     * and integrity of the role management system in the contract.
+     * If the role is available and active, the function grants the DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER role
+     * to the specified address, marks the role as assigned in the `assignedRoles` mapping, and emits a
+     * `SetDistributorTimeAdministratorRoleManager` event with the address of the new role manager.
      *
-     * @param _roleManagerAddress The address to which the DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER
-     *                            role will be granted. This address will then have the capabilities
-     *                            associated with this role.
+     * @param _roleManagerAddress The address to be assigned the DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER role.
      */
     function setDistributorTimeAdministratorRoleManager(
         address _roleManagerAddress
-    ) external onlyOwner {
+    )
+        external
+        onlyOwner
+        notBurned(DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER)
+        notGranted(DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER)
+    {
         _grantRole(
-            DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER,
+            DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER,
             _roleManagerAddress
         );
+        assignedRoles[DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER] = true;
         emit SetDistributorTimeAdministratorRoleManager(_roleManagerAddress);
     }
 
     /**
-     * @dev Grants the DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE to a specified address.
+     * @dev Assigns the DISTRIBUTIONS_ADMINISTRATOR_ROLE to a specified address. This function allows an account
+     * with the DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER role to delegate the responsibilities of distribution
+     * time administration to a specific account. This role is crucial for managing the distribution schedule
+     * and ensuring the proper administration of the distribution process.
      *
-     * This function enables an account with the DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER role
-     * to assign the DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE to another address. The
-     * DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE is likely associated with permissions to manage various
-     * aspects of distribution timing within the contract.
+     * The function includes checks to ensure:
+     * 1. The caller has the DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER role, allowing them to manage this role.
+     * 2. The DISTRIBUTIONS_ADMINISTRATOR_ROLE has not been burned (permanently deactivated).
+     * 3. The DISTRIBUTIONS_ADMINISTRATOR_ROLE has not already been granted to another account.
      *
-     * The function is protected by the `onlyRole` modifier, ensuring that only an account that has
-     * been assigned the DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER role can grant the
-     * DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE. This access control mechanism helps maintain the
-     * integrity and security of role assignments in the contract, allowing for controlled delegation
-     * of responsibilities.
+     * If the role is available and active, the function grants the DISTRIBUTIONS_ADMINISTRATOR_ROLE to the
+     * specified address, marks the role as assigned in the `assignedRoles` mapping, and emits a
+     * `SetDistributorTimeAdministratorRole` event with the address of the new role administrator.
      *
-     * @param _roleManagerAddress The address to which the DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE
-     *                            will be granted. This address will be empowered with the
-     *                            capabilities associated with managing distribution timing.
+     * @param _roleManagerAddress The address to be assigned the DISTRIBUTIONS_ADMINISTRATOR_ROLE.
      */
-
     function setDistributorTimeAdministratorRole(
         address _roleManagerAddress
-    ) external onlyRole(DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE_MANAGER) {
-        _grantRole(DISTRIBUTIONS_TIME_ADMINISTRATOR_ROLE, _roleManagerAddress);
+    )
+        external
+        onlyRole(DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER)
+        notBurned(DISTRIBUTIONS_ADMINISTRATOR_ROLE)
+        notGranted(DISTRIBUTIONS_ADMINISTRATOR_ROLE)
+    {
+        _grantRole(DISTRIBUTIONS_ADMINISTRATOR_ROLE, _roleManagerAddress);
+        assignedRoles[DISTRIBUTIONS_ADMINISTRATOR_ROLE] = true;
         emit SetDistributorTimeAdministratorRole(_roleManagerAddress);
     }
 
     /**
      * @dev Public function to grant a specific role to an account.
      *
-     * This function allows an address with the `OWNER_ROLE` to grant a specific role to the `_account`
-     * address. Roles define different sets of permissions or responsibilities within the contract,
-     * and granting a role to an account assigns those associated privileges.
+     * This function allows the contract owner to grant a specific role to the `_account` address. Roles
+     * are used to define permissions and responsibilities within the contract, and granting a role confers
+     * those associated privileges to the specified account.
      *
      * The function takes two parameters:
-     * - `role`: The bytes32 identifier of the role to be granted.
+     * - `_role`: The bytes32 identifier of the role to be granted.
      * - `_account`: The address to which the role is to be granted.
      *
-     * Access to this function is restricted to addresses with the `OWNER_ROLE`, ensuring that only
-     * contract owners or administrators can grant roles.
+     * As a safeguard, the function enforces several preconditions before granting the role:
+     * - Ensures that the `_account` address is not blocklisted, maintaining the security and integrity
+     *   of the contract by preventing potentially malicious entities from gaining privileged access.
+     * - Checks that the `_account` address is not the zero address (`address(0)`), avoiding unintentional
+     *   role assignments to an address that may have special significance or represent "no address".
+     * - Verifies that the role has not already been burned, ensuring that only active, valid roles are
+     *   assignable.
+     * - Confirms that the role has not already been granted, upholding the principle of unique role assignments.
      *
-     * Before granting the role, the function performs the following checks:
-     * - Ensures that the `_account` address is not blocklisted, preventing blocklisted accounts
-     *   from receiving roles.
-     * - Verifies that the `_account` address is not the zero address (`address(0)`) to prevent
-     *   accidental modifications of the zero address, which may have special significance.
+     * This function can only be called by the contract owner, ensuring that role management is kept under
+     * tight control and preventing unauthorized role assignments.
      *
-     * @param role The bytes32 identifier of the role to be granted.
+     * @param _role The bytes32 identifier of the role to be granted.
      * @param _account The address to which the role is to be granted.
      *
      * Requirements:
-     * - The `_account` address must not be blocklisted, and it must not be the zero address (`address(0)`).
-     *   This ensures that roles are granted to valid, non-blocklisted addresses.
+     * - The contract caller must be the contract owner.
+     * - The `_account` must not be blocklisted or the zero address.
+     * - The `_role` must not be burned or already granted.
      */
-
     function grantRole(
-        bytes32 role,
+        bytes32 _role,
         address _account
     )
         public
@@ -682,47 +738,95 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         onlyOwner
         notBlocklisted(_account)
         notZeroAddress(_account)
+        notBurned(_role)
+        notGranted(_role)
     {
-        if (assignedRoles[role]) {
-            revert("Role already granted to another account");
-        }
-        assignedRoles[role] = true;
-        _grantRole(role, _account);
+        assignedRoles[_role] = true;
+        _grantRole(_role, _account);
     }
 
     /**
      * @dev Public function to revoke a specific role from an account.
      *
-     * This function allows an address with the `OWNER_ROLE` to revoke a specific role from the
-     * `_account` address. Roles define different sets of permissions or responsibilities within the
-     * contract, and revoking a role from an account effectively removes those associated privileges.
+     * This function allows the contract owner to remove a previously granted role from the `_account` address.
+     * Roles are crucial for defining permissions and responsibilities within the contract, and revoking a role
+     * removes those associated privileges from the specified account.
      *
      * The function takes two parameters:
-     * - `role`: The bytes32 identifier of the role to be revoked.
-     * - `_account`: The address from which the role is to be revoked.
+     * - `_role`: The bytes32 identifier of the role to be revoked.
+     * - `_account`: The address from which the role is to be removed.
      *
-     * Access to this function is restricted to addresses with the `OWNER_ROLE`, ensuring that only
-     * contract owners or administrators can revoke roles.
+     * Before revoking the role, the function performs the following checks:
+     * - Verifies that the `_account` address is not the zero address (`address(0)`) to prevent accidental
+     *   modifications of the zero address, which may have special significance.
+     * - Ensures that the `_account` currently has the role to be revoked, providing a safeguard against
+     *   unnecessary or mistaken revocations.
      *
-     * Before revoking the role, the function checks that the `_account` address is not the zero
-     * address (`address(0)`) to prevent accidental modifications of the zero address, which may
-     * have special significance.
+     * Access to this function is restricted to addresses with the `OWNER_ROLE`, ensuring that only contract
+     * owners or administrators can revoke roles. Upon successful revocation of the role, the function updates
+     * the `assignedRoles` mapping and calls the internal `_revokeRole` function.
      *
-     * @param role The bytes32 identifier of the role to be revoked.
-     * @param _account The address from which the role is to be revoked.
+     * @param _role The bytes32 identifier of the role to be revoked.
+     * @param _account The address from which the role is to be removed.
      *
      * Requirements:
      * - The `_account` address must not be the zero address (`address(0)`).
-     *   This prevents accidentally modifying the zero address, which may have special significance.
+     * - The `_account` must currently have the role that is being revoked.
      */
-
     function revokeRole(
-        bytes32 role,
+        bytes32 _role,
         address _account
     ) public override onlyOwner notZeroAddress(_account) {
-        require(hasRole(role, _account), "Account does not have role");
-        assignedRoles[role] = false;
-        _revokeRole(role, _account);
+        require(
+            hasRole(_role, _account),
+            "MPROMasterDistributor: Account does not have role"
+        );
+        assignedRoles[_role] = false;
+        _revokeRole(_role, _account);
+    }
+
+    /**
+     * @dev Public function for an account to renounce a specific role it possesses.
+     *
+     * This function allows an account to voluntarily renounce a role it holds, effectively removing the
+     * associated permissions and responsibilities. It's a self-initiated action, meaning an account can
+     * only renounce roles that it possesses for itself, enhancing the security by preventing external
+     * entities from forcibly removing roles.
+     *
+     * The function takes two parameters:
+     * - `_role`: The bytes32 identifier of the role to be renounced.
+     * - `_account`: The address of the account renouncing the role. To ensure security and prevent
+     *   unintended renunciations, the function checks that `_account` is the same as `_msgSender()`.
+     *
+     * Before allowing the role to be renounced, the function performs the following check:
+     * - Verifies that the `_account` address is not the zero address (`address(0)`) to prevent
+     *   accidental modifications of the zero address, which may have special significance.
+     *
+     * Upon successfully renouncing the role, the function updates the `assignedRoles` mapping and
+     * calls the internal `_revokeRole` function to formally remove the role.
+     *
+     * @param _role The bytes32 identifier of the role to be renounced.
+     * @param _account The address of the account renouncing the role.
+     *
+     * Requirements:
+     * - The `_account` address must not be the zero address (`address(0)`).
+     * - The `_account` must be the same as `_msgSender()`, ensuring that accounts can only renounce
+     *   roles for themselves.
+     */
+    function renounceRole(
+        bytes32 _role,
+        address _account
+    ) public override notZeroAddress(_account) {
+        require(
+            _account == _msgSender(),
+            "AccessControl: can only renounce roles for self"
+        );
+        require(
+            hasRole(_role, _account),
+            "MPROMasterDistributor: Account does not have role"
+        );
+        assignedRoles[_role] = false;
+        _revokeRole(_role, _account);
     }
 
     /**
@@ -765,7 +869,9 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
             isLister(_account) ||
             isDistributor(_account)
         ) {
-            revert("Account has a role and cannot be blocklisted");
+            revert(
+                "MPROMasterDistributor: Account has a role and cannot be blocklisted"
+            );
         }
         blocklisted[_account] = _blocklist;
     }
@@ -804,10 +910,45 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         whitelisted[_account] = _whitelist;
     }
 
+    /**
+     * @dev Public view function to check if an account has the LISTER_ROLE.
+     *
+     * This function provides a convenient way to verify if a specific account has been granted the LISTER_ROLE
+     * within the contract. The LISTER_ROLE is typically associated with permissions to list items or manage
+     * lists within the contract's ecosystem.
+     *
+     * The function takes a single parameter:
+     * - `_account`: The address of the account to check for the LISTER_ROLE.
+     *
+     * It returns a boolean value indicating whether the specified account has the LISTER_ROLE. This can be
+     * particularly useful for front-end interfaces or other contract interactions that require a quick check
+     * of an account's roles or permissions.
+     *
+     * @param _account The address of the account to check for the LISTER_ROLE.
+     * @return A boolean value indicating whether the specified account has the LISTER_ROLE.
+     */
     function isLister(address _account) public view returns (bool) {
         return hasRole(LISTER_ROLE, _account);
     }
 
+    /**
+     * @dev Public view function to check if an address has the MPROMasterDistributor role.
+     *
+     * This function provides a straightforward method to verify if a specific address has been granted the
+     * MPROMasterDistributor role within the contract. The MPROMasterDistributor role is typically associated
+     * with permissions to manage and execute token distributions, making it a critical role for the
+     * operational aspects of the contract.
+     *
+     * The function takes a single parameter:
+     * - `_address`: The address of the account to check for the MPROMasterDistributor role.
+     *
+     * It returns a boolean value indicating whether the specified address has the MPROMasterDistributor role.
+     * This is particularly useful for confirming role assignments and managing access to distribution-related
+     * functions or sections of a dApp interface.
+     *
+     * @param _address The address of the account to check for the MPROMasterDistributor role.
+     * @return A boolean value indicating whether the specified address has the MPROMasterDistributor role.
+     */
     function isDistributor(address _address) public view returns (bool) {
         return hasRole(MPRO_MASTER_DISTRIBUTOR_ROLE, _address);
     }
@@ -863,8 +1004,28 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         return whitelisted[_account];
     }
 
+    /**
+     * @dev External view function to check if minting is allowed for a given address.
+     *
+     * This function checks whether the provided `_minter` address is authorized to mint new tokens.
+     * In the current implementation, minting is restricted to the contract itself, signifying that
+     * minting operations are controlled internally and not open to external entities directly.
+     *
+     * The function takes a single parameter:
+     * - `_minter`: The address to be checked for minting permissions.
+     *
+     * It returns true if the `_minter` address is the same as the address of this contract,
+     * indicating that minting is allowed. Otherwise, it reverts the transaction with the message
+     * "Distributor only", enforcing the rule that only the contract itself can initiate minting operations.
+     *
+     * @param _minter The address to be checked for minting permissions.
+     * @return A boolean value indicating whether minting is allowed for the specified `_minter` address.
+     */
     function mintAllowed(address _minter) external view returns (bool) {
-        require(_minter == address(this), "Distributor only");
+        require(
+            _minter == address(this),
+            "MPROMasterDistributor: Distributor only"
+        );
         return true;
     }
 
@@ -899,7 +1060,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
             !isBlocklisted(_from) &&
                 !isBlocklisted(_to) &&
                 !isBlocklisted(_msgSender),
-            "Action on blocklisted account"
+            "MPROMasterDistributor: Action on blocklisted account"
         );
 
         return true;
@@ -935,12 +1096,27 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     ) external view returns (bool) {
         require(
             !isBlocklisted(_spender) && !isBlocklisted(_msgSender),
-            "Action on blocklisted account"
+            "MPROMasterDistributor: Action on blocklisted account"
         );
 
         return true;
     }
 
+    /**
+     * @dev External view function to retrieve the list of distribution reductions.
+     *
+     * This function provides access to the array of `distributionReductions`, which contains
+     * records of all the reductions applied to the token distribution over time. Each record in
+     * the array is a `DistributionReduction` struct, detailing the timestamp when the reduction
+     * takes effect and the new daily distribution amount after the reduction.
+     *
+     * The function does not take any parameters and returns the entire array of
+     * `distributionReductions`. This can be particularly useful for front-end interfaces or
+     * other contract interactions that require visibility into the history and schedule of
+     * distribution reductions.
+     *
+     * @return An array of `DistributionReduction` structs, representing the history of distribution reductions.
+     */
     function getDistributionReductions()
         external
         view
