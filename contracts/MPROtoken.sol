@@ -6,7 +6,7 @@ import "@layerzerolabs/solidity-examples/contracts/token/oft/v2/OFTV2.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-interface IMPROMasterDistributor {
+interface IJAKANTMasterDistributor {
     function getBurnAmount(
         address _from,
         uint256 _amount
@@ -25,8 +25,8 @@ interface IMPROMasterDistributor {
     ) external view returns (bool);
 }
 
-contract MPROToken is OFTV2, ERC20Votes {
-    IMPROMasterDistributor private mproMasterDistributor;
+contract JAKANTToken is OFTV2, ERC20Votes {
+    IJAKANTMasterDistributor private mproMasterDistributor;
 
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -62,7 +62,7 @@ contract MPROToken is OFTV2, ERC20Votes {
      * - Sets the `mproRoleManager` by casting the `_mproRoleManager` address to the
      *   IMPRORoleManager interface, which is expected to manage role-based access in the contract.
      * - Sets the `mproMasterDistributor` by casting the `_mproMasterDistributor` address to the
-     *   IMPROMasterDistributor interface, which is expected to handle distribution-related logic.
+     *   IJAKANTMasterDistributor interface, which is expected to handle distribution-related logic.
      *
      * The `_lzEndpoint` parameter is specific to the OFTV2 initialization and is related to LayerZero
      * endpoint configurations.
@@ -89,7 +89,9 @@ contract MPROToken is OFTV2, ERC20Votes {
         for (uint256 i = 0; i < premintAddresses.length; i++) {
             super._mint(premintAddresses[i], premintValues[i]);
         }
-        mproMasterDistributor = IMPROMasterDistributor(_mproMasterDistributor);
+        mproMasterDistributor = IJAKANTMasterDistributor(
+            _mproMasterDistributor
+        );
         _transferOwnership(_owner);
     }
 

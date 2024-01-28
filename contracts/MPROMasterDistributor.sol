@@ -7,13 +7,13 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-interface IMPROToken is IERC20 {
+interface IJAKANTToken is IERC20 {
     function mint(address account, uint256 amount) external;
 }
 
 /**
  * @title MPRO Master Distributor Contract
- * @dev The MPROMasterDistributor contract manages token distribution and related operations.
+ * @dev The JAKANTMasterDistributor contract manages token distribution and related operations.
  * It is responsible for distributing tokens to eligible recipients based on specified rules and
  * configurations. This contract utilizes the AccessControl feature for role-based access control.
  *
@@ -21,7 +21,7 @@ interface IMPROToken is IERC20 {
  * Role-based access control allows specific roles to perform authorized actions within the contract,
  * ensuring proper governance and security.
  */
-contract MPROMasterDistributor is Context, AccessControl, Ownable {
+contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
     using SafeMath for uint256;
 
     /**
@@ -47,17 +47,17 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * This constant defines the number of seconds in a day, which is used for time calculations
      * within the contract. It is set to the standard value of 86,400 seconds per day.
      */
-    uint256 constant SECONDS_PER_DAY = 86400;
+    uint256 constant SECONDS_PER_DAY = 600;
 
-    bytes32 public constant MPRO_MASTER_DISTRIBUTOR_ROLE =
-        keccak256("MPRO_MASTER_DISTRIBUTOR_ROLE");
+    bytes32 public constant JAKANT_MASTER_DISTRIBUTOR_ROLE =
+        keccak256("JAKANT_MASTER_DISTRIBUTOR_ROLE");
     bytes32 public constant DISTRIBUTIONS_ADMINISTRATOR_ROLE =
         keccak256("DISTRIBUTIONS_ADMINISTRATOR_ROLE");
     bytes32 public constant DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER =
         keccak256("DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER");
     bytes32 public constant LISTER_ROLE = keccak256("LISTER_ROLE");
 
-    IMPROToken private mproToken;
+    IJAKANTToken private mproToken;
 
     mapping(bytes32 => bool) private assignedRoles;
 
@@ -188,7 +188,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         uint256 _redutionTimestamp,
         uint256 _reductionAmount
     );
-    event SetMPROToken(address _mproTokenAddress);
+    event SetJAKANTToken(address _mproTokenAddress);
     event SetBurnRate(uint256 _burnRate);
     event SetDistributorTimeAdministratorRoleManager(
         address _roleManagerAddress
@@ -228,12 +228,13 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         }
 
         require(
-            _reductionTimestamp >= lastReduction.reductionTimestamp + 183 days,
-            "MPROMasterDistributor: New redution start time cannot be lower than 183 days after last redution timestamp"
+            _reductionTimestamp >=
+                lastReduction.reductionTimestamp + 10 minutes,
+            "JAKANTMasterDistributor: New redution start time cannot be lower than 10 minutes after last redution timestamp"
         );
         require(
             _reductionAmount >= lastReduction.daylyDistribution.div(2),
-            "MPROMasterDistributor: New reduction amount cannot be greater than half of the last reduction amount"
+            "JAKANTMasterDistributor: New reduction amount cannot be greater than half of the last reduction amount"
         );
         _;
     }
@@ -252,7 +253,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     modifier notBlocklisted(address _account) {
         require(
             !blocklisted[_account],
-            "MPROMasterDistributor: Action on blocklisted account"
+            "JAKANTMasterDistributor: Action on blocklisted account"
         );
         _;
     }
@@ -271,7 +272,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     modifier notZeroAddress(address _account) {
         require(
             _account != address(0),
-            "MPROMasterDistributor: Action on address zero"
+            "JAKANTMasterDistributor: Action on address zero"
         );
         _;
     }
@@ -288,7 +289,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     modifier notGranted(bytes32 _role) {
         require(
             !assignedRoles[_role],
-            "MPROMasterDistributor: Role already granted to another account"
+            "JAKANTMasterDistributor: Role already granted to another account"
         );
         _;
     }
@@ -306,7 +307,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     modifier notBurned(bytes32 _role) {
         require(
             !hasRole(_role, address(0)),
-            "MPROMasterDistributor: Role is already burned"
+            "JAKANTMasterDistributor: Role is already burned"
         );
         _;
     }
@@ -324,10 +325,10 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     constructor(address _owner) {
         // Set the distribution start timestamp to 14 days from the current block time.
         // This delay allows for a preparation period before the distribution begins.
-        distributionStartTimestamp = block.timestamp + 14 days;
+        distributionStartTimestamp = block.timestamp + 1 days;
         // Set the deadline for the distribution period to 30 days from the current block time.
         // This sets a finite period for the distribution process, ensuring a clear end date.
-        distributionStartTimestampDeadLine = block.timestamp + 30 days;
+        distributionStartTimestampDeadLine = block.timestamp + 10 days;
         // Assign the OWNER_ROLE to the provided owner address. This role typically includes
         // elevated privileges and is crucial for contract administration and oversight.
         _transferOwnership(_owner);
@@ -411,7 +412,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * @dev Distributes a specified amount of tokens to a given address.
      *
      * This function allows tokens to be minted and distributed to a specified address.
-     * It can only be called by an account with the MPRO_MASTER_DISTRIBUTOR_ROLE.
+     * It can only be called by an account with the JAKANT_MASTER_DISTRIBUTOR_ROLE.
      * The function performs several checks before proceeding with the distribution:
      * - It ensures that the amount to be distributed is greater than 0.
      * - It verifies that the current timestamp is greater than or equal to the distributionStartTimestamp,
@@ -430,15 +431,15 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     function distribute(
         address _to,
         uint256 _amount
-    ) public onlyRole(MPRO_MASTER_DISTRIBUTOR_ROLE) {
+    ) public onlyRole(JAKANT_MASTER_DISTRIBUTOR_ROLE) {
         require(_amount > 0, "amount must be greater than 0");
         require(
             block.timestamp >= distributionStartTimestamp,
-            "MPROMasterDistributor: Minting is not enabled yet"
+            "JAKANTMasterDistributor: Minting is not enabled yet"
         );
         require(
             _amount <= getAvailableForDistributionTokenQuantity(),
-            "MPROMasterDistributor: Minting limit exceeded"
+            "JAKANTMasterDistributor: Minting limit exceeded"
         );
         distributedTokens += _amount;
         mproToken.mint(_to, _amount);
@@ -451,7 +452,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      *
      * This function allows for the bulk distribution of tokens to a list of addresses, each receiving
      * a specified amount. It is designed to efficiently handle multiple distributions in a single transaction.
-     * The function can only be invoked by an account with the MPRO_MASTER_DISTRIBUTOR_ROLE.
+     * The function can only be invoked by an account with the JAKANT_MASTER_DISTRIBUTOR_ROLE.
      *
      * The function performs the following checks and operations:
      * - It ensures that the length of the `_to` address array matches the length of the `_amount` array,
@@ -471,7 +472,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     function distributeBulk(
         address[] memory _to,
         uint256[] memory _amount
-    ) public onlyRole(MPRO_MASTER_DISTRIBUTOR_ROLE) {
+    ) public onlyRole(JAKANT_MASTER_DISTRIBUTOR_ROLE) {
         require(
             _to.length == _amount.length,
             "to and amount arrays must have the same length"
@@ -502,15 +503,15 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     function setDistributionStartTime(uint256 _startTime) external onlyOwner {
         require(
             distributedTokens == 0,
-            "MPROMasterDistributor: Distribution start time cannot be changed after distribution has started"
+            "JAKANTMasterDistributor: Distribution start time cannot be changed after distribution has started"
         );
         require(
             _startTime > block.timestamp,
-            "MPROMasterDistributor: Distribution start time cannot be lower than current time"
+            "JAKANTMasterDistributor: Distribution start time cannot be lower than current time"
         );
         require(
             _startTime <= distributionStartTimestampDeadLine,
-            "MPROMasterDistributor: Distribution start time must be less than distributionStartTimeDeadline"
+            "JAKANTMasterDistributor: Distribution start time must be less than distributionStartTimeDeadline"
         );
 
         distributionStartTimestamp = _startTime;
@@ -562,17 +563,17 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * immutable once set to prevent unauthorized changes.
      *
      * If the token address has not been set before, the function updates the `mproToken` state variable and emits
-     * a `SetMPROToken` event with the new MPRO token address.
+     * a `SetJAKANTToken` event with the new MPRO token address.
      *
      * @param _mproTokenAddress The address of the MPRO token contract to be set.
      */
-    function setMPROToken(address _mproTokenAddress) external onlyOwner {
+    function setJAKANTToken(address _mproTokenAddress) external onlyOwner {
         require(
-            mproToken == IMPROToken(address(0)),
-            "MPROMasterDistributor: MPRO token is already set"
+            mproToken == IJAKANTToken(address(0)),
+            "JAKANTMasterDistributor: MPRO token is already set"
         );
-        mproToken = IMPROToken(_mproTokenAddress);
-        emit SetMPROToken(_mproTokenAddress);
+        mproToken = IJAKANTToken(_mproTokenAddress);
+        emit SetJAKANTToken(_mproTokenAddress);
     }
 
     /**
@@ -630,7 +631,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     function setBurnRate(uint256 _burnRate) external onlyOwner {
         require(
             _burnRate <= 1000,
-            "MPROMasterDistributor: Burn rate cannot be greater than or equal to 10%"
+            "JAKANTMasterDistributor: Burn rate cannot be greater than or equal to 10%"
         );
         burnRate = _burnRate;
         emit SetBurnRate(_burnRate);
@@ -779,7 +780,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     ) public override onlyOwner notZeroAddress(_account) {
         require(
             hasRole(_role, _account),
-            "MPROMasterDistributor: Account does not have role"
+            "JAKANTMasterDistributor: Account does not have role"
         );
         assignedRoles[_role] = false;
         _revokeRole(_role, _account);
@@ -823,7 +824,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         );
         require(
             hasRole(_role, _account),
-            "MPROMasterDistributor: Account does not have role"
+            "JAKANTMasterDistributor: Account does not have role"
         );
         assignedRoles[_role] = false;
         _revokeRole(_role, _account);
@@ -870,7 +871,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
             isDistributor(_account)
         ) {
             revert(
-                "MPROMasterDistributor: Account has a role and cannot be blocklisted"
+                "JAKANTMasterDistributor: Account has a role and cannot be blocklisted"
             );
         }
         blocklisted[_account] = _blocklist;
@@ -932,25 +933,25 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     }
 
     /**
-     * @dev Public view function to check if an address has the MPROMasterDistributor role.
+     * @dev Public view function to check if an address has the JAKANTMasterDistributor role.
      *
      * This function provides a straightforward method to verify if a specific address has been granted the
-     * MPROMasterDistributor role within the contract. The MPROMasterDistributor role is typically associated
+     * JAKANTMasterDistributor role within the contract. The JAKANTMasterDistributor role is typically associated
      * with permissions to manage and execute token distributions, making it a critical role for the
      * operational aspects of the contract.
      *
      * The function takes a single parameter:
-     * - `_address`: The address of the account to check for the MPROMasterDistributor role.
+     * - `_address`: The address of the account to check for the JAKANTMasterDistributor role.
      *
-     * It returns a boolean value indicating whether the specified address has the MPROMasterDistributor role.
+     * It returns a boolean value indicating whether the specified address has the JAKANTMasterDistributor role.
      * This is particularly useful for confirming role assignments and managing access to distribution-related
      * functions or sections of a dApp interface.
      *
-     * @param _address The address of the account to check for the MPROMasterDistributor role.
-     * @return A boolean value indicating whether the specified address has the MPROMasterDistributor role.
+     * @param _address The address of the account to check for the JAKANTMasterDistributor role.
+     * @return A boolean value indicating whether the specified address has the JAKANTMasterDistributor role.
      */
     function isDistributor(address _address) public view returns (bool) {
-        return hasRole(MPRO_MASTER_DISTRIBUTOR_ROLE, _address);
+        return hasRole(JAKANT_MASTER_DISTRIBUTOR_ROLE, _address);
     }
 
     /**
@@ -1024,7 +1025,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     function mintAllowed(address _minter) external view returns (bool) {
         require(
             _minter == address(this),
-            "MPROMasterDistributor: Distributor only"
+            "JAKANTMasterDistributor: Distributor only"
         );
         return true;
     }
@@ -1060,7 +1061,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
             !isBlocklisted(_from) &&
                 !isBlocklisted(_to) &&
                 !isBlocklisted(_msgSender),
-            "MPROMasterDistributor: Action on blocklisted account"
+            "JAKANTMasterDistributor: Action on blocklisted account"
         );
 
         return true;
@@ -1096,7 +1097,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
     ) external view returns (bool) {
         require(
             !isBlocklisted(_spender) && !isBlocklisted(_msgSender),
-            "MPROMasterDistributor: Action on blocklisted account"
+            "JAKANTMasterDistributor: Action on blocklisted account"
         );
 
         return true;

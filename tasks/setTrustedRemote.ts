@@ -1,6 +1,6 @@
 import CHAIN_ID from '../constants/chainIds.json'
 import { getDeploymentAddresses } from '../utils/readStatic'
-import { MPROToken } from "../typechain-types"
+import { JAKANTToken } from "../typechain-types"
 import { ethers } from 'ethers'
 
 module.exports = async function (taskArgs: any, hre: any) {
@@ -22,7 +22,7 @@ module.exports = async function (taskArgs: any, hre: any) {
 	}
 
 	// get local contract
-	const localContractInstance: MPROToken = await hre.ethers.getContract(localContract)
+	const localContractInstance: JAKANTToken = await hre.ethers.getContract(localContract)
 
 	// get deployed remote contract address
 	const remoteAddress = getDeploymentAddresses(taskArgs.targetNetwork)[

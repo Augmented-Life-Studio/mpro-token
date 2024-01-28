@@ -1,28 +1,28 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { MPROToken, MPROToken__factory, MPROMasterDistributor, MPROMasterDistributor__factory } from "../typechain-types";
+import { JAKANTToken, JAKANTToken__factory, JAKANTMasterDistributor, JAKANTMasterDistributor__factory } from "../typechain-types";
 
-// npx hardhat test test/MPROToken.ts
+// npx hardhat test test/JAKANTToken.ts
 
-describe("MPROToken", function () {
-  let mproToken: MPROToken;
-  let masterDistributor: MPROMasterDistributor;
+describe("JAKANTToken", function () {
+  let mproToken: JAKANTToken;
+  let masterDistributor: JAKANTMasterDistributor;
   let deployer: HardhatEthersSigner, owner: HardhatEthersSigner, lister: HardhatEthersSigner, addr1: HardhatEthersSigner, addr2: HardhatEthersSigner, addr3: HardhatEthersSigner;
 
   beforeEach(async function () {
     [deployer, owner, lister, addr1, addr2, addr3] = await ethers.getSigners();
 
-    const MasterDistributorFactory: MPROMasterDistributor__factory = await ethers.getContractFactory("MPROMasterDistributor");
+    const MasterDistributorFactory: JAKANTMasterDistributor__factory = await ethers.getContractFactory("JAKANTMasterDistributor");
     masterDistributor = await MasterDistributorFactory.deploy(owner.address);
     const masterDistributorAddress = await masterDistributor.getAddress();
 
-    await masterDistributor.connect(owner).grantRole(await masterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE(), owner.address);
+    await masterDistributor.connect(owner).grantRole(await masterDistributor.JAKANT_MASTER_DISTRIBUTOR_ROLE(), owner.address);
     await masterDistributor.connect(owner).grantRole(await masterDistributor.LISTER_ROLE(), lister.address);
 
-    const MPROTokenFactory: MPROToken__factory = await ethers.getContractFactory("MPROToken");
-    mproToken = await MPROTokenFactory.deploy(
-      "MPROToken",
+    const JAKANTTokenFactory: JAKANTToken__factory = await ethers.getContractFactory("JAKANTToken");
+    mproToken = await JAKANTTokenFactory.deploy(
+      "JAKANTToken",
       "MPRO",
       [owner.address], // Premint addresses
       [ethers.parseEther("100")], // Premint values
@@ -35,7 +35,7 @@ describe("MPROToken", function () {
 
   describe("Deployment", function () {
     it("Should properly deploy and set initial values", async function () {
-      expect(await mproToken.name()).to.equal("MPROToken");
+      expect(await mproToken.name()).to.equal("JAKANTToken");
       expect(await mproToken.symbol()).to.equal("MPRO");
       expect(await mproToken.balanceOf(owner.address)).to.equal(ethers.parseEther("100"));
       expect(await mproToken.owner()).to.equal(owner.address);

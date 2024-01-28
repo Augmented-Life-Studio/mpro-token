@@ -3,33 +3,39 @@ import { LZ_ENDPOINTS } from "../constants/layerzeroEndpoints"
 import hre from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/dist/types";
 import { verifyContractWithRetry } from "../utils/verifyContract";
-import { MPROMasterDistributor } from "../typechain-types";
+import { JAKANTMasterDistributor } from "../typechain-types";
 
-// npx hardhat deploy --tags MPROToken --network bsc-testnet
+// npx hardhat deploy --tags JAKANTToken --network bsc-testnet
 
 module.exports = async function ({ deployments, getNamedAccounts }: {
     deployments: DeploymentsExtension, getNamedAccounts: any
 }) {
     const { deployer, owner } = await getNamedAccounts()
 
-    const TOKEN_NAME = "MPROToken";
-    const TOKEN_SYMBOL = "MPRO";
+    const MPRO_MASTER_DISTRIBUTOR = owner;
+    const TOKEN_NAME = "JAKANTToken";
+    const TOKEN_SYMBOL = "JAKANT";
 
     const { deploy } = deployments
     const lzEndpointAddress = LZ_ENDPOINTS[hre.network.name as keyof typeof LZ_ENDPOINTS]
 
-    const mproMasterDistributor = await deploy("MPROMasterDistributor", {
+    const mproMasterDistributor = await deploy("JAKANTMasterDistributor", {
         from: deployer,
-        args: [owner],
+        args: [deployer],
         log: true,
         waitConfirmations: 1,
+        skipIfAlreadyDeployed: true,
     })
 
-    console.log("MPROMasterDistributor deployed to:", mproMasterDistributor.address);
+    console.log("JAKANTMasterDistributor deployed to:", mproMasterDistributor.address);
 
-    await verifyContractWithRetry("MPROMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
+    await verifyContractWithRetry("contracts/MPROMasterDistributor.sol:JAKANTMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
 
-    const mproToken = await deploy("MPROToken", {
+
+    const MproMasterDistributorFactory = await ethers.getContractFactory("JAKANTMasterDistributor")
+    const MproMasterDistributor = await MproMasterDistributorFactory.attach(mproMasterDistributor.address) as JAKANTMasterDistributor;
+
+    const mproToken = await deploy("JAKANTToken", {
         from: deployer,
         args: [
             TOKEN_NAME,
@@ -42,11 +48,17 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
         ],
         log: true,
         waitConfirmations: 1,
+        skipIfAlreadyDeployed: true,
     })
 
-    console.log("MPROToken deployed to:", mproToken);
+    await verifyContractWithRetry("contracts/MPROtoken.sol:JAKANTToken", mproToken.address, mproToken.args);
 
-    await verifyContractWithRetry("MPROToken", mproToken.address, mproToken.args);
+    // Set JakantToken to master distributor
+    await MproMasterDistributor.setJAKANTToken(mproToken.address);
+    // Grant role master distributor to mproMasterDistributor
+    await MproMasterDistributor.grantRole(await MproMasterDistributor.JAKANT_MASTER_DISTRIBUTOR_ROLE(), MPRO_MASTER_DISTRIBUTOR);
+    await MproMasterDistributor.transferOwnership(owner);
+
 }
 
-module.exports.tags = ["MPROToken"]
+module.exports.tags = ["JAKANTToken"]

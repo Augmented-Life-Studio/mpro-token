@@ -1,16 +1,16 @@
 import { ethers, getNamedAccounts, network } from 'hardhat';
 import { expect } from 'chai';
-import { MPROMasterDistributor, MPROToken, MPROToken__factory } from '../typechain-types';
+import { JAKANTMasterDistributor, JAKANTToken, JAKANTToken__factory } from '../typechain-types';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { mine } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 
-// npx hardhat test test/MPROMasterDistributor.ts
+// npx hardhat test test/JAKANTMasterDistributor.ts
 
 const ONE_DAY = 24 * 60 * 60;
 
-describe('MPROMasterDistributor', () => {
-  let mproToken: MPROToken;
-  let mproMasterDistributor: MPROMasterDistributor;
+describe('JAKANTMasterDistributor', () => {
+  let mproToken: JAKANTToken;
+  let mproMasterDistributor: JAKANTMasterDistributor;
   let deployer: HardhatEthersSigner, owner: HardhatEthersSigner, lister: HardhatEthersSigner, vesting: HardhatEthersSigner, distributor: HardhatEthersSigner, distributionTimeRoleManager: HardhatEthersSigner, distributionTimeManager: HardhatEthersSigner, addrs: HardhatEthersSigner[];
   let masterDistributorDeploymentTimestamp: number;
   let initialDistributionStartTime: number;
@@ -29,7 +29,7 @@ describe('MPROMasterDistributor', () => {
     ] = await ethers.getSigners()
 
 
-    const MasterDistributorFactory = await ethers.getContractFactory("MPROMasterDistributor");
+    const MasterDistributorFactory = await ethers.getContractFactory("JAKANTMasterDistributor");
     mproMasterDistributor = await MasterDistributorFactory.deploy(owner.address);
 
     const mproMasterDistributorDeploymentBlockNumber = mproMasterDistributor.deploymentTransaction()?.blockNumber as number;
@@ -37,15 +37,15 @@ describe('MPROMasterDistributor', () => {
     initialDistributionStartTime = masterDistributorDeploymentTimestamp + DISTRIBUTION_START_DELAY;
 
 
-    await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE(), distributor.address);
+    await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.JAKANT_MASTER_DISTRIBUTOR_ROLE(), distributor.address);
     await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.LISTER_ROLE(), lister.address);
 
-    const MPROToken: MPROToken__factory = await ethers.getContractFactory('MPROToken');
-    mproToken = await MPROToken.deploy(
+    const JAKANTToken: JAKANTToken__factory = await ethers.getContractFactory('JAKANTToken');
+    mproToken = await JAKANTToken.deploy(
       'MPRO', 'MPRO', [vesting], [ethers.parseUnits("100")], '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1', mproMasterDistributor.target, owner.address
     );
 
-    await mproMasterDistributor.connect(owner).setMPROToken(mproToken.target);
+    await mproMasterDistributor.connect(owner).setJAKANTToken(mproToken.target);
     INITIAL_DAILY_DISTRIBUTION = await mproMasterDistributor.initialDaylyDistribution();
   });
 
@@ -55,7 +55,7 @@ describe('MPROMasterDistributor', () => {
       expect(await mproToken.owner()).to.equal(owner.address);
     });
     it('Should set the right distributor', async () => {
-      expect(await mproMasterDistributor.hasRole(await mproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE(), distributor.address)).to.be.true;
+      expect(await mproMasterDistributor.hasRole(await mproMasterDistributor.JAKANT_MASTER_DISTRIBUTOR_ROLE(), distributor.address)).to.be.true;
     });
     it("Should set proper distributionStartTimestamp", async () => {
       expect(await mproMasterDistributor.distributionStartTimestamp()).to.equal(initialDistributionStartTime);
@@ -86,7 +86,7 @@ describe('MPROMasterDistributor', () => {
   })
   describe("Distribute function", () => {
     it("Should return error before distribution starts", async () => {
-      await expect(mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("10"))).to.be.revertedWith("MPROMasterDistributor: Minting is not enabled yet");
+      await expect(mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("10"))).to.be.revertedWith("JAKANTMasterDistributor: Minting is not enabled yet");
     });
     it("Should enable distribution after distribution start time", async () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1]);
@@ -97,7 +97,7 @@ describe('MPROMasterDistributor', () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1]);
       await mine();
       await mproMasterDistributor.connect(distributor).distribute(deployer.address, INITIAL_DAILY_DISTRIBUTION);
-      await expect(mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("1"))).to.be.revertedWith("MPROMasterDistributor: Minting limit exceeded");
+      await expect(mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("1"))).to.be.revertedWith("JAKANTMasterDistributor: Minting limit exceeded");
     })
     it("Should be able to mint 250000 dayly for 4 days", async () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 100]);
@@ -116,7 +116,7 @@ describe('MPROMasterDistributor', () => {
   })
   describe("DistributeBulk function", () => {
     it("Should return error before distribution starts", async () => {
-      await expect(mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("10")])).to.be.revertedWith("MPROMasterDistributor: Minting is not enabled yet");
+      await expect(mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("10")])).to.be.revertedWith("JAKANTMasterDistributor: Minting is not enabled yet");
     })
     it("Should enable distribution after distribution start time", async () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1]);
@@ -127,7 +127,7 @@ describe('MPROMasterDistributor', () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1]);
       await mine();
       await mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("250000")]);
-      await expect(mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("1")])).to.be.revertedWith("MPROMasterDistributor: Minting limit exceeded");
+      await expect(mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("1")])).to.be.revertedWith("JAKANTMasterDistributor: Minting limit exceeded");
     })
     it("Should be able to mint 250000 dayly for 4 days", async () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 100]);
@@ -149,19 +149,19 @@ describe('MPROMasterDistributor', () => {
       await expect(mproMasterDistributor.connect(deployer).setDistributionStartTime(100)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should return error when distribution start time is lower that current time", async () => {
-      await expect(mproMasterDistributor.connect(owner).setDistributionStartTime(1000)).to.be.revertedWith("MPROMasterDistributor: Distribution start time cannot be lower than current time");
+      await expect(mproMasterDistributor.connect(owner).setDistributionStartTime(1000)).to.be.revertedWith("JAKANTMasterDistributor: Distribution start time cannot be lower than current time");
     })
     it("Should return error when function is called by non owner", async () => {
       await expect(mproMasterDistributor.connect(deployer).setDistributionStartTime(100)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should return error when distribution start time is higher than distributionStartTimeDeadline", async () => {
-      await expect(mproMasterDistributor.connect(owner).setDistributionStartTime(masterDistributorDeploymentTimestamp + (31 * ONE_DAY))).to.be.revertedWith("MPROMasterDistributor: Distribution start time must be less than distributionStartTimeDeadline");
+      await expect(mproMasterDistributor.connect(owner).setDistributionStartTime(masterDistributorDeploymentTimestamp + (31 * ONE_DAY))).to.be.revertedWith("JAKANTMasterDistributor: Distribution start time must be less than distributionStartTimeDeadline");
     })
     it("Should set distribution start time", async () => {
       await expect(mproMasterDistributor.connect(owner).setDistributionStartTime(masterDistributorDeploymentTimestamp + (1 * ONE_DAY))).to.not.be.reverted;
     })
   })
-  // npx hardhat test test/MPROMasterDistributor.ts --grep "addDistributionReduction function"
+  // npx hardhat test test/JAKANTMasterDistributor.ts --grep "addDistributionReduction function"
   describe("addDistributionReduction function", () => {
     beforeEach(async () => {
       await mproMasterDistributor.connect(owner).setDistributorTimeAdministratorRoleManager(distributionTimeRoleManager.address);
@@ -171,13 +171,13 @@ describe('MPROMasterDistributor', () => {
       await expect(mproMasterDistributor.connect(deployer).addDistributionReduction(100, 100)).to.be.revertedWith(`AccessControl: account ${deployer.address.toLowerCase()} is missing role ${await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE()}`);
     })
     it("Should return error when distribution start time is lower that current time", async () => {
-      await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime, 1000)).to.be.revertedWith("MPROMasterDistributor: New redution start time cannot be lower than 183 days after last redution timestamp");
+      await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime, 1000)).to.be.revertedWith("JAKANTMasterDistributor: New redution start time cannot be lower than 183 days after last redution timestamp");
     })
     it("Should return error when reduction is set to lower than 183 days after last reduction", async () => {
-      await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (182 * ONE_DAY), 1000000)).to.be.revertedWith("MPROMasterDistributor: New redution start time cannot be lower than 183 days after last redution timestamp");
+      await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (182 * ONE_DAY), 1000000)).to.be.revertedWith("JAKANTMasterDistributor: New redution start time cannot be lower than 183 days after last redution timestamp");
     })
     it("Should return error when _reductionAmount is greater thn half of the last reduction amount", async () => {
-      await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), 500000)).to.be.revertedWith("MPROMasterDistributor: New reduction amount cannot be greater than half of the last reduction amount");
+      await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), 500000)).to.be.revertedWith("JAKANTMasterDistributor: New reduction amount cannot be greater than half of the last reduction amount");
     })
     it("Should add distribution reduction called by distributions time administator", async () => {
       await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), ethers.parseUnits("240000"))).to.not.be.reverted;
@@ -208,12 +208,12 @@ describe('MPROMasterDistributor', () => {
       expect(amountAfterReduction).to.equal(ethers.parseUnits((250000 * 183 + 14 * 300000).toString()) + INITIAL_DAILY_DISTRIBUTION + ethers.parseUnits("300000"));
     })
   })
-  describe("setMPROToken function", () => {
+  describe("setJAKANTToken function", () => {
     it("Should return error if called by non owner", async () => {
-      await expect(mproMasterDistributor.connect(deployer).setMPROToken(mproToken.target)).to.be.revertedWith(`Ownable: caller is not the owner`);
+      await expect(mproMasterDistributor.connect(deployer).setJAKANTToken(mproToken.target)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should return error when token is already set", async () => {
-      await expect(mproMasterDistributor.connect(owner).setMPROToken(mproToken.target)).to.be.revertedWith("MPROMasterDistributor: MPRO token is already set");
+      await expect(mproMasterDistributor.connect(owner).setJAKANTToken(mproToken.target)).to.be.revertedWith("JAKANTMasterDistributor: MPRO token is already set");
     })
   })
   describe("getBurnAmount function", () => {
@@ -232,7 +232,7 @@ describe('MPROMasterDistributor', () => {
       await expect(mproMasterDistributor.connect(deployer).setBurnRate(100)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should return error when burn rate is greater than 100", async () => {
-      await expect(mproMasterDistributor.connect(owner).setBurnRate(1001)).to.be.revertedWith("MPROMasterDistributor: Burn rate cannot be greater than or equal to 10%");
+      await expect(mproMasterDistributor.connect(owner).setBurnRate(1001)).to.be.revertedWith("JAKANTMasterDistributor: Burn rate cannot be greater than or equal to 10%");
     })
     it("Should set burn rate", async () => {
       await expect(mproMasterDistributor.connect(owner).setBurnRate(500)).to.not.be.reverted;
@@ -247,11 +247,11 @@ describe('MPROMasterDistributor', () => {
     })
     it("Shoould not be able to set distributor time administrator manager role twice", async () => {
       await mproMasterDistributor.connect(owner).setDistributorTimeAdministratorRoleManager(distributionTimeRoleManager.address);
-      await expect(mproMasterDistributor.connect(owner).setDistributorTimeAdministratorRoleManager(distributionTimeRoleManager.address)).to.be.revertedWith("MPROMasterDistributor: Role already granted to another account");
+      await expect(mproMasterDistributor.connect(owner).setDistributorTimeAdministratorRoleManager(distributionTimeRoleManager.address)).to.be.revertedWith("JAKANTMasterDistributor: Role already granted to another account");
     })
     it("When role is granted to address 0 can not be longer granted", async () => {
       await expect(mproMasterDistributor.connect(owner).setDistributorTimeAdministratorRoleManager(ethers.ZeroAddress)).to.not.be.reverted;
-      await expect(mproMasterDistributor.connect(owner).setDistributorTimeAdministratorRoleManager(distributionTimeRoleManager.address)).to.be.revertedWith("MPROMasterDistributor: Role is already burned");
+      await expect(mproMasterDistributor.connect(owner).setDistributorTimeAdministratorRoleManager(distributionTimeRoleManager.address)).to.be.revertedWith("JAKANTMasterDistributor: Role is already burned");
     })
   })
   describe("setDistributorTimeAdministratorRole function", () => {
@@ -266,11 +266,11 @@ describe('MPROMasterDistributor', () => {
     })
     it("Shoould not be able to set distributor time administrator role twice", async () => {
       await mproMasterDistributor.connect(distributionTimeRoleManager).setDistributorTimeAdministratorRole(distributionTimeManager.address);
-      await expect(mproMasterDistributor.connect(distributionTimeRoleManager).setDistributorTimeAdministratorRole(distributionTimeManager.address)).to.be.revertedWith("MPROMasterDistributor: Role already granted to another account");
+      await expect(mproMasterDistributor.connect(distributionTimeRoleManager).setDistributorTimeAdministratorRole(distributionTimeManager.address)).to.be.revertedWith("JAKANTMasterDistributor: Role already granted to another account");
     })
     it("When role is granted to address 0 can not be longer granted", async () => {
       await expect(mproMasterDistributor.connect(distributionTimeRoleManager).setDistributorTimeAdministratorRole(ethers.ZeroAddress)).to.not.be.reverted;
-      await expect(mproMasterDistributor.connect(distributionTimeRoleManager).setDistributorTimeAdministratorRole(distributionTimeManager.address)).to.be.revertedWith("MPROMasterDistributor: Role is already burned");
+      await expect(mproMasterDistributor.connect(distributionTimeRoleManager).setDistributorTimeAdministratorRole(distributionTimeManager.address)).to.be.revertedWith("JAKANTMasterDistributor: Role is already burned");
     })
   })
   describe("grantRole function", () => {
@@ -279,25 +279,25 @@ describe('MPROMasterDistributor', () => {
     })
     it("Should return error when role is assigned to blocklisted account", async () => {
       await mproMasterDistributor.connect(lister).blocklist(addrs[0].address, true);
-      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.LISTER_ROLE(), addrs[0].address)).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
+      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.LISTER_ROLE(), addrs[0].address)).to.be.revertedWith("JAKANTMasterDistributor: Action on blocklisted account");
     })
     it("Should return error when role is assigned to address zero", async () => {
-      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.LISTER_ROLE(), ethers.ZeroAddress)).to.be.revertedWith("MPROMasterDistributor: Action on address zero");
+      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.LISTER_ROLE(), ethers.ZeroAddress)).to.be.revertedWith("JAKANTMasterDistributor: Action on address zero");
     })
     it("Should return error when role is assigned more then once", async () => {
       await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER(), addrs[0].address)
-      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER(), addrs[0].address)).to.be.revertedWith("MPROMasterDistributor: Role already granted to another account");
+      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER(), addrs[0].address)).to.be.revertedWith("JAKANTMasterDistributor: Role already granted to another account");
     })
     it("Should grant role", async () => {
       await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER(), lister.address)).to.not.be.reverted;
     })
     it("Should block adding role to multiple accounts", async () => {
       await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER(), addrs[0].address)
-      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER(), addrs[1].address)).to.be.revertedWith("MPROMasterDistributor: Role already granted to another account");
+      await expect(mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER(), addrs[1].address)).to.be.revertedWith("JAKANTMasterDistributor: Role already granted to another account");
     })
     it("Should block adding role to multiple accounts when is revoked on different account", async () => {
       await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER(), addrs[0].address)
-      await expect(mproMasterDistributor.connect(owner).revokeRole(await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER(), addrs[2].address)).to.be.revertedWith("MPROMasterDistributor: Account does not have role");
+      await expect(mproMasterDistributor.connect(owner).revokeRole(await mproMasterDistributor.DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER(), addrs[2].address)).to.be.revertedWith("JAKANTMasterDistributor: Account does not have role");
     })
   })
   describe("revokeRole function", () => {
@@ -305,7 +305,7 @@ describe('MPROMasterDistributor', () => {
       await expect(mproMasterDistributor.connect(deployer).revokeRole(await mproMasterDistributor.LISTER_ROLE(), lister.address)).to.be.revertedWith('Ownable: caller is not the owner');
     })
     it("Should return error when role is revoked from address zero", async () => {
-      await expect(mproMasterDistributor.connect(owner).revokeRole(await mproMasterDistributor.LISTER_ROLE(), ethers.ZeroAddress)).to.be.revertedWith("MPROMasterDistributor: Action on address zero");
+      await expect(mproMasterDistributor.connect(owner).revokeRole(await mproMasterDistributor.LISTER_ROLE(), ethers.ZeroAddress)).to.be.revertedWith("JAKANTMasterDistributor: Action on address zero");
     })
     it("Should revoke role", async () => {
       await expect(mproMasterDistributor.connect(owner).revokeRole(await mproMasterDistributor.LISTER_ROLE(), lister.address)).to.not.be.reverted;
@@ -316,16 +316,16 @@ describe('MPROMasterDistributor', () => {
       await expect(mproMasterDistributor.connect(deployer).blocklist(addrs[0].address, true)).to.be.revertedWith(`AccessControl: account ${deployer.address.toLowerCase()} is missing role ${await mproMasterDistributor.LISTER_ROLE()}`);
     })
     it("Should return error when blocklisting address zero", async () => {
-      await expect(mproMasterDistributor.connect(lister).blocklist(ethers.ZeroAddress, true)).to.be.revertedWith("MPROMasterDistributor: Action on address zero");
+      await expect(mproMasterDistributor.connect(lister).blocklist(ethers.ZeroAddress, true)).to.be.revertedWith("JAKANTMasterDistributor: Action on address zero");
     })
     it("Should return error when called on owner account", async () => {
-      await expect(mproMasterDistributor.connect(lister).blocklist(owner.address, true)).to.be.revertedWith("MPROMasterDistributor: Account has a role and cannot be blocklisted");
+      await expect(mproMasterDistributor.connect(lister).blocklist(owner.address, true)).to.be.revertedWith("JAKANTMasterDistributor: Account has a role and cannot be blocklisted");
     })
     it("Should return error when called on distributor account", async () => {
-      await expect(mproMasterDistributor.connect(lister).blocklist(distributor.address, true)).to.be.revertedWith("MPROMasterDistributor: Account has a role and cannot be blocklisted");
+      await expect(mproMasterDistributor.connect(lister).blocklist(distributor.address, true)).to.be.revertedWith("JAKANTMasterDistributor: Account has a role and cannot be blocklisted");
     })
     it("Should return error when called on lister account", async () => {
-      await expect(mproMasterDistributor.connect(lister).blocklist(lister.address, true)).to.be.revertedWith("MPROMasterDistributor: Account has a role and cannot be blocklisted");
+      await expect(mproMasterDistributor.connect(lister).blocklist(lister.address, true)).to.be.revertedWith("JAKANTMasterDistributor: Account has a role and cannot be blocklisted");
     })
     it("Should blocklist account", async () => {
       await expect(mproMasterDistributor.connect(lister).blocklist(addrs[0].address, true)).to.not.be.reverted;
@@ -336,7 +336,7 @@ describe('MPROMasterDistributor', () => {
       await expect(mproMasterDistributor.connect(deployer).whitelist(addrs[0].address, true)).to.be.revertedWith(`AccessControl: account ${deployer.address.toLowerCase()} is missing role ${await mproMasterDistributor.LISTER_ROLE()}`);
     })
     it("Should return error when whitelisting address zero", async () => {
-      await expect(mproMasterDistributor.connect(lister).whitelist(ethers.ZeroAddress, true)).to.be.revertedWith("MPROMasterDistributor: Action on address zero");
+      await expect(mproMasterDistributor.connect(lister).whitelist(ethers.ZeroAddress, true)).to.be.revertedWith("JAKANTMasterDistributor: Action on address zero");
     })
     it("Should whitelist account", async () => {
       await expect(mproMasterDistributor.connect(lister).whitelist(addrs[0].address, true)).to.not.be.reverted;
@@ -353,7 +353,7 @@ describe('MPROMasterDistributor', () => {
   })
   describe("mintAllowed function to call only from address(this)", () => {
     it("Should return false when called from other address", async () => {
-      await expect(mproMasterDistributor.mintAllowed(deployer.address)).to.be.revertedWith("MPROMasterDistributor: Distributor only");
+      await expect(mproMasterDistributor.mintAllowed(deployer.address)).to.be.revertedWith("JAKANTMasterDistributor: Distributor only");
     })
     it("Should return true when called from this address", async () => {
       expect(await mproMasterDistributor.mintAllowed(mproMasterDistributor.target)).to.be.true;
@@ -362,15 +362,15 @@ describe('MPROMasterDistributor', () => {
   describe("transferAllowed function", () => {
     it("Should return false when from is blocklisted", async () => {
       await mproMasterDistributor.connect(lister).blocklist(addrs[0].address, true);
-      await expect(mproMasterDistributor.transferAllowed(addrs[0].address, addrs[1].address, addrs[2].address)).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
+      await expect(mproMasterDistributor.transferAllowed(addrs[0].address, addrs[1].address, addrs[2].address)).to.be.revertedWith("JAKANTMasterDistributor: Action on blocklisted account");
     })
     it("Should return false when to is blocklisted", async () => {
       await mproMasterDistributor.connect(lister).blocklist(addrs[1].address, true);
-      await expect(mproMasterDistributor.transferAllowed(addrs[0].address, addrs[1].address, addrs[2].address)).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
+      await expect(mproMasterDistributor.transferAllowed(addrs[0].address, addrs[1].address, addrs[2].address)).to.be.revertedWith("JAKANTMasterDistributor: Action on blocklisted account");
     })
     it("Should return false when caller is blocklisted", async () => {
       await mproMasterDistributor.connect(lister).blocklist(addrs[2].address, true);
-      await expect(mproMasterDistributor.transferAllowed(addrs[0].address, addrs[1].address, addrs[2].address)).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
+      await expect(mproMasterDistributor.transferAllowed(addrs[0].address, addrs[1].address, addrs[2].address)).to.be.revertedWith("JAKANTMasterDistributor: Action on blocklisted account");
     })
     it("Should return true when none of the accounts are blocklisted", async () => {
       expect(await mproMasterDistributor.transferAllowed(addrs[0].address, addrs[1].address, addrs[2].address)).to.be.true;
@@ -379,11 +379,11 @@ describe('MPROMasterDistributor', () => {
   describe("approveAllowed function", () => {
     it("Should return false when spender is blocklisted", async () => {
       await mproMasterDistributor.connect(lister).blocklist(addrs[0].address, true);
-      await expect(mproMasterDistributor.approveAllowed(addrs[0].address, addrs[1].address)).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
+      await expect(mproMasterDistributor.approveAllowed(addrs[0].address, addrs[1].address)).to.be.revertedWith("JAKANTMasterDistributor: Action on blocklisted account");
     })
     it("Should return false when caller is blocklisted", async () => {
       await mproMasterDistributor.connect(lister).blocklist(addrs[1].address, true);
-      await expect(mproMasterDistributor.approveAllowed(addrs[0].address, addrs[1].address)).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
+      await expect(mproMasterDistributor.approveAllowed(addrs[0].address, addrs[1].address)).to.be.revertedWith("JAKANTMasterDistributor: Action on blocklisted account");
     })
     it("Should return true when none of the accounts are blocklisted", async () => {
       expect(await mproMasterDistributor.approveAllowed(addrs[0].address, addrs[1].address)).to.be.true;

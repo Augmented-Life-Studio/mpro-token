@@ -1,6 +1,6 @@
 const CHAIN_ID = require("../constants/chainIds.json")
 import { ethers } from 'ethers'
-import { MPROToken } from '../typechain-types';
+import { JAKANTToken } from '../typechain-types';
 
 module.exports = async function (taskArgs: any, hre: any) {
     console.log(hre);
@@ -32,7 +32,7 @@ module.exports = async function (taskArgs: any, hre: any) {
     const remoteChainId = CHAIN_ID[taskArgs.targetNetwork]
 
     // get local contract
-    const localContractInstance = await hre.ethers.getContract(localContract) as MPROToken
+    const localContractInstance = await hre.ethers.getContract(localContract) as JAKANTToken
 
     // quote fee with default adapterParams
     let adapterParams = ethers.solidityPacked(["uint16", "uint256"], [1, 200000]) // default adapterParams example

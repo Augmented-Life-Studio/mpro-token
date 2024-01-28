@@ -15,15 +15,15 @@ yarn test
 1. Deploy two contracts to the different networks
 
 ```shell
-npx hardhat --network bsc deploy --tags MPROToken
-npx hardhat --network polygon deploy --tags MPROToken
+npx hardhat --network bsc deploy --tags JAKANTToken
+npx hardhat --network polygon deploy --tags JAKANTToken
 ```
 
 2. Set the "trusted remotes" (ie: your contracts) so each of them can receive messages from one another, and `only` one another.
 
 ```shell
-npx hardhat --network bsc setTrustedRemote --target-network polygon --contract MPROToken
-npx hardhat --network polygon setTrustedRemote --target-network bsc --contract MPROToken
+npx hardhat --network bsc setTrustedRemote --target-network polygon --contract JAKANTToken
+npx hardhat --network polygon setTrustedRemote --target-network bsc --contract JAKANTToken
 ```
 
 3. Set the "minDstGas" required on the destination chain.
