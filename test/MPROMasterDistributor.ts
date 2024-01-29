@@ -176,8 +176,11 @@ describe('MPROMasterDistributor', () => {
     it("Should return error when reduction is set to lower than 183 days after last reduction", async () => {
       await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (182 * ONE_DAY), 1000000)).to.be.revertedWith("MPROMasterDistributor: New redution start time cannot be lower than 183 days after last redution timestamp");
     })
-    it("Should return error when _reductionAmount is greater thn half of the last reduction amount", async () => {
+    it("Should return error when _reductionAmount is greater than half of the last reduction amount", async () => {
       await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), 500000)).to.be.revertedWith("MPROMasterDistributor: New reduction amount cannot be greater than half of the last reduction amount");
+    })
+    it("Should return error when _reductionAmount is greater than last reduction amount multiplied by 2", async () => {
+      await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), ethers.parseUnits("600000"))).to.be.revertedWith("MPROMasterDistributor: New reduction amount cannot be greater than the last reduction amount multiplied by 2");
     })
     it("Should add distribution reduction called by distributions time administator", async () => {
       await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), ethers.parseUnits("240000"))).to.not.be.reverted;
