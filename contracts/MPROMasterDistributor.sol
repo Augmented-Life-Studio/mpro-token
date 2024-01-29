@@ -365,10 +365,16 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
         uint256 timeElapsed = block.timestamp - distributionStartTimestamp;
         uint256 daysElapsed = timeElapsed / SECONDS_PER_DAY;
 
+        uint256 reductionEndTimestamp = block.timestamp;
+
+        if (distributionReductions.length == 0) {
+            return totalDistribution + daysElapsed * initialDaylyDistribution;
+        }
+
         for (
-            uint256 index = 0;
-            index < distributionReductions.length;
-            index++
+            uint256 index = distributionReductions.length - 1;
+            index >= 0;
+            index--
         ) {
             DistributionReduction
                 memory distributionReduction = distributionReductions[index];
@@ -376,14 +382,21 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
             // Check if the current timestamp is greater than the reduction timestamp
             if (block.timestamp >= distributionReduction.reductionTimestamp) {
                 // Calculate the number of days in the current period
-                uint256 daysInCurrentPeriod = (block.timestamp -
+                uint256 daysInCurrentPeriod = (reductionEndTimestamp -
                     distributionReduction.reductionTimestamp) / SECONDS_PER_DAY;
                 totalDistribution +=
                     distributionReduction.daylyDistribution +
                     (daysInCurrentPeriod *
                         distributionReduction.daylyDistribution);
+                // Update timestamp for previous period
+                reductionEndTimestamp = distributionReduction
+                    .reductionTimestamp;
                 // Update daysElapsed for previous period
                 daysElapsed -= daysInCurrentPeriod;
+                // Check if we have reached the start of the distribution reduction
+                if (index == 0) {
+                    break;
+                }
             }
         }
 

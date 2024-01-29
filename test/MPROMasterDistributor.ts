@@ -210,6 +210,30 @@ describe('JAKANTMasterDistributor', () => {
       const amountAfterReduction = await mproMasterDistributor.getAllTokenDistribution();
       expect(amountAfterReduction).to.equal(ethers.parseUnits((250000 * 183 + 14 * 300000).toString()) + INITIAL_DAILY_DISTRIBUTION + ethers.parseUnits("300000"));
     })
+    it("Should properly count allTokenDistribution when multiple reductions are added", async () => {
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1]);
+      await mine();
+      // After 14 days from deployment, 250000 tokens should be marked as distributed
+      const amount = await mproMasterDistributor.getAllTokenDistribution();
+      expect(amount).to.equal(ethers.parseUnits("250000"));
+      // + 14 DAYS with seconds dust
+      await network.provider.send("evm_increaseTime", [14 * ONE_DAY]);
+      await mine();
+      const amountAfter14Days = await mproMasterDistributor.getAllTokenDistribution();
+      expect(amountAfter14Days).to.equal(ethers.parseUnits((250000 * 14).toString()) + INITIAL_DAILY_DISTRIBUTION);
+      await mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), ethers.parseUnits("300000"));
+      await mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (366 * ONE_DAY), ethers.parseUnits("400000"));
+      // + 183 DAYS with seconds dust
+      await network.provider.send("evm_increaseTime", [183 * ONE_DAY]);
+      await mine();
+      const amountAfterReduction = await mproMasterDistributor.getAllTokenDistribution();
+      expect(amountAfterReduction).to.equal(ethers.parseUnits((250000 * 183 + 14 * 300000).toString()) + INITIAL_DAILY_DISTRIBUTION + ethers.parseUnits("300000"));
+      // + 183 DAYS with seconds dust
+      await network.provider.send("evm_increaseTime", [183 * ONE_DAY]);
+      await mine();
+      const amountAfterSecondReduction = await mproMasterDistributor.getAllTokenDistribution();
+      expect(amountAfterSecondReduction).to.equal(ethers.parseUnits((250000 * 183 + 183 * 300000 + 14 * 400000).toString()) + INITIAL_DAILY_DISTRIBUTION + ethers.parseUnits("300000") + ethers.parseUnits("400000"));
+    })
   })
   describe("setJAKANTToken function", () => {
     it("Should return error if called by non owner", async () => {
