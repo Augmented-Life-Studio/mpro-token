@@ -204,6 +204,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      * enforce the following:
      * 1. The new reduction timestamp must be at least 183 days after the last reduction's timestamp.
      * 2. The new daily distribution amount must not be more than half of the last reduction's daily distribution.
+     * 3. The new daily distribution amount must not be more than the last reduction's daily distribution multiplied by 2.
      *
      * This ensures a controlled and limited reduction of distribution over time.
      *
@@ -235,6 +236,10 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
         require(
             _reductionAmount >= lastReduction.daylyDistribution.div(2),
             "JAKANTMasterDistributor: New reduction amount cannot be greater than half of the last reduction amount"
+        );
+        require(
+            _reductionAmount <= lastReduction.daylyDistribution.mul(2),
+            "MPROMasterDistributor: New reduction amount cannot be greater than the last reduction amount multiplied by 2"
         );
         _;
     }
