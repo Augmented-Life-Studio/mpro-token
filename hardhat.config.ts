@@ -41,7 +41,7 @@ const config: HardhatUserConfig = {
 			default: 0, // wallet address 0, of the mnemonic in .env
 		},
 		owner: {
-			default: "0xfe015fEC2E10c29d2481fa22520C08c23805fb97", // wallet address 1, of the mnemonic in .env
+			default: "0x767e5C2359e7c809b16D8cFFdB9464F91b6c970B", // wallet address 1, of the mnemonic in .env
 		},
 		vesting: {
 			default: 2, // wallet address 2, of the mnemonic in .env

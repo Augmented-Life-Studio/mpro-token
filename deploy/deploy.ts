@@ -5,7 +5,7 @@ import { DeploymentsExtension } from "hardhat-deploy/dist/types";
 import { verifyContractWithRetry } from "../utils/verifyContract";
 import { JAKANTMasterDistributor } from "../typechain-types";
 
-// npx hardhat deploy --tags JAKANTToken --network bsc-testnet
+// npx hardhat deploy --tags JAKANTToken --network mumbai
 
 module.exports = async function ({ deployments, getNamedAccounts }: {
     deployments: DeploymentsExtension, getNamedAccounts: any
@@ -40,11 +40,11 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
         args: [
             TOKEN_NAME,
             TOKEN_SYMBOL,
-            [deployer], // Premint addresses
-            [ethers.parseEther("100")], // Premint values
+            [deployer, owner], // Premint addresses
+            [ethers.parseEther("1000000"), ethers.parseEther("1000000")], // Premint values
             lzEndpointAddress, // LayerZero Endpoint
             mproMasterDistributor.address,
-            owner
+            deployer
         ],
         log: true,
         waitConfirmations: 1,
