@@ -3,11 +3,9 @@ import { ethers } from 'ethers'
 import { JAKANTToken } from '../typechain-types';
 
 module.exports = async function (taskArgs: any, hre: any) {
-    console.log(hre);
+    const { deployer, owner } = await hre.getNamedAccounts()
 
-    let signers = await hre.ethers.getSigners()
-    let owner = signers[0]
-    let toAddress = owner.address
+    let toAddress = owner
     let qty = ethers.parseEther(taskArgs.qty)
 
     let localContract, remoteContract
@@ -42,12 +40,12 @@ module.exports = async function (taskArgs: any, hre: any) {
 
     let tx = await (
         await localContractInstance.sendFrom(
-            owner.address, // 'from' address to send tokens
+            deployer, // 'from' address to send tokens
             remoteChainId, // remote LayerZero chainId
             toAddressBytes, // 'to' address to send tokens
             qty, // amount of tokens to send (in wei)
             {
-                refundAddress: owner.address,
+                refundAddress: owner,
                 zroPaymentAddress: ethers.ZeroAddress,
                 adapterParams,
             },
