@@ -128,7 +128,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      * It serves as a record of the cumulative tokens distributed and is often used to enforce
      * distribution limits or to check the available tokens for distribution.
      */
-    uint256 private distributedTokens = 0;
+    uint256 public distributedTokens = 0;
 
     /**
      * @dev Private constant representing the initial daily distribution of tokens.
@@ -153,7 +153,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      * These configurations determine when and how the daily distribution amount of tokens changes
      * over time, allowing for flexibility in managing token distribution within the contract.
      */
-    DistributionReduction[] private distributionReductions;
+    DistributionReduction[] public distributionReductions;
 
     /**
      * @dev Public variable representing the burn rate for tokens.
