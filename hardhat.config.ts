@@ -41,11 +41,14 @@ const config: HardhatUserConfig = {
 			default: 0, // wallet address 0, of the mnemonic in .env
 		},
 		owner: {
-			default: "0x767e5C2359e7c809b16D8cFFdB9464F91b6c970B", // wallet address 1, of the mnemonic in .env
-			// default: "0xfe015fEC2E10c29d2481fa22520C08c23805fb97", // FOX
+			// default: "0xfe015fEC2E10c29d2481fa22520C08c23805fb97", // Whoa
+			default: "0x767e5C2359e7c809b16D8cFFdB9464F91b6c970B", // Chase
 		},
-		vesting: {
-			default: 2, // wallet address 2, of the mnemonic in .env
+		vesting1: {
+			default: "0xfe015fEC2E10c29d2481fa22520C08c23805fb97", // Whoa
+		},
+		vesting2: {
+			default: "0x767e5C2359e7c809b16D8cFFdB9464F91b6c970B", // Chase
 		},
 	},
 	gasReporter: {
@@ -124,7 +127,7 @@ const config: HardhatUserConfig = {
 		goerli: {
 			url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", // public infura endpoint
 			chainId: 5,
-			accounts: accounts("goerli"),
+			accounts: accounts('goerli'),
 		},
 		"bsc-testnet": {
 			url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
