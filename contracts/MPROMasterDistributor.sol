@@ -9,8 +9,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 interface IJAKANTToken is IERC20 {
     function mint(address account, uint256 amount) external;
-
-    function maxCap() external pure returns (uint256);
 }
 
 /**
@@ -439,7 +437,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      *   ensuring that the distribution period has started.
      * - It checks that the total amount of tokens to be distributed (including the current distribution)
      *   does not exceed the quantity available for distribution as determined by
-     *   getAvailableForDistributionTokenQuantity and the maxCap of the MPRO token.
+     *   getAvailableForDistributionTokenQuantity.
      *
      * If all checks pass, the function increments the distributedTokens state variable by the amount
      * to be distributed and calls the mint function on the mproToken contract to mint the tokens
@@ -455,12 +453,11 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
         require(_amount > 0, "amount must be greater than 0");
         require(
             block.timestamp >= distributionStartTimestamp,
-            "JAKANTMasterDistributor: Minting is not enabled yet"
+            "JAKANTMasterDistributor: Distribution is not enabled yet"
         );
         require(
-            mproToken.maxCap() >= distributedTokens + _amount &&
-                _amount <= getAvailableForDistributionTokenQuantity(),
-            "JAKANTMasterDistributor: Minting limit exceeded"
+            _amount <= getAvailableForDistributionTokenQuantity(),
+            "JAKANTMasterDistributor: Distribution limit exceeded"
         );
 
         mproToken.mint(_to, _amount);
