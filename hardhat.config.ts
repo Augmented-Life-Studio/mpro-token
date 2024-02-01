@@ -53,6 +53,9 @@ const config: HardhatUserConfig = {
 		helper: {
 			default: 1,
 		},
+		helper: {
+			default: 3, // wallet address 3, of the mnemonic in .env
+		},
 	},
 	gasReporter: {
 		currency: 'USD',

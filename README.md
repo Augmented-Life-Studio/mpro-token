@@ -12,6 +12,13 @@ yarn test
 1. Add a `.env` file (to the root project directory) with your `MNEMONIC="your mnemonic"` and fund your wallet in order to deploy!
 2. Follow any of the tutorials below to deploy your contract to the desired network.
 
+## Accounts setting
+- In hardhat.config.js, you can set the accounts to use for deploying contracts and running tasks.
+- There are named accounts (deployer, owner, vesting, helper) already set up for you. You can check them out in hardhat.config.js.
+- Deployer is the account that will deploy the contracts. 
+- Helper is the account that will be used to run tasks, like setting remotes etc.
+IMPORTANT: helper needs to be the owner of the token contracts, so that it can set the trusted remotes.
+
 1. Deploy two contracts to the different networks
 
 ```shell
