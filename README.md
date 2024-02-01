@@ -22,21 +22,35 @@ npx hardhat --network bsc-testnet deploy --tags JAKANTRemote
 2. Set the "trusted remotes" (ie: your contracts) so each of them can receive messages from one another, and `only` one another.
 
 ```shell
-npx hardhat --network bsc-testnet setTrustedRemote --target-network goerli --contract JAKANTLight
-npx hardhat --network goerli setTrustedRemote --target-network bsc-testnet --contract MPRO
+npx hardhat --network goerli setTrustedRemote --target-network mumbai --local-contract JAKANTToken --remote-contract JAKANTTokenLight
+npx hardhat --network goerli setTrustedRemote --target-network bsc-testnet --local-contract JAKANTToken --remote-contract JAKANTTokenLight
+
+npx hardhat --network mumbai setTrustedRemote --target-network goerli --local-contract JAKANTTokenLight --remote-contract JAKANTToken
+npx hardhat --network mumbai setTrustedRemote --target-network bsc-testnet --local-contract JAKANTTokenLight --remote-contract JAKANTTokenLight
+
+npx hardhat --network bsc-testnet setTrustedRemote --target-network goerli --local-contract JAKANTTokenLight --remote-contract JAKANTToken
+npx hardhat --network bsc-testnet setTrustedRemote --target-network mumbai --local-contract JAKANTTokenLight --remote-contract JAKANTTokenLight
 ```
 
 3. Set the "minDstGas" required on the destination chain.
 
 ```shell
-npx hardhat --network bsc-testnet setMinDstGas --packet-type 0 --target-network goerli --contract JAKANTLight --min-gas 100000
-npx hardhat --network goerli setMinDstGas --packet-type 0 --target-network bsc-testnet --contract MPRO --min-gas 100000
+npx hardhat --network goerli setMinDstGas --packet-type 0 --target-network bsc-testnet --contract JAKANTToken --min-gas 100000
+npx hardhat --network goerli setMinDstGas --packet-type 0 --target-network mumbai --contract JAKANTToken --min-gas 100000
+
+npx hardhat --network mumbai setMinDstGas --packet-type 0 --target-network goerli --contract JAKANTTokenLight --min-gas 100000
+npx hardhat --network mumbai setMinDstGas --packet-type 0 --target-network bsc-testnet --contract JAKANTTokenLight --min-gas 100000
+
+npx hardhat --network bsc-testnet setMinDstGas --packet-type 0 --target-network goerli --contract JAKANTTokenLight --min-gas 100000
+npx hardhat --network bsc-testnet setMinDstGas --packet-type 0 --target-network mumbai --contract JAKANTTokenLight --min-gas 100000
 ```
 
 4. Send tokens from one chain to another.
 
 ```shell
-npx hardhat --network goerli oftSendTokens --target-network bsc-testnet --qty 1 --contract JAKANTToken
+npx hardhat --network goerli oftSendTokens --target-network bsc-testnet --qty 1000 --local-contract JAKANTToken --remote-contract JAKANTTokenLight
+npx hardhat --network bsc-testnet oftSendTokens --target-network mumbai --qty 1000 --local-contract JAKANTTokenLight --remote-contract JAKANTTokenLight
+npx hardhat --network mumbai oftSendTokens --target-network goerli --qty 1000 --local-contract JAKANTTokenLight --remote-contract JAKANTToken
 ```
 
 

@@ -3,10 +3,12 @@ import { ethers } from 'ethers'
 import { JAKANTToken } from '../typechain-types';
 
 module.exports = async function (taskArgs: any, hre: any) {
-    const { deployer, owner } = await hre.getNamedAccounts()
+    const { helper } = await hre.getNamedAccounts()
 
-    let toAddress = owner
+    let toAddress = helper
     let qty = ethers.parseEther(taskArgs.qty)
+
+    const helperSigner = await hre.ethers.getSigner(helper)
 
     let localContract, remoteContract
 
@@ -39,13 +41,13 @@ module.exports = async function (taskArgs: any, hre: any) {
     console.log(`fees[0] (wei): ${fees[0]} / (eth): ${ethers.formatEther(fees[0])}`)
 
     let tx = await (
-        await localContractInstance.sendFrom(
-            deployer, // 'from' address to send tokens
+        await localContractInstance.connect(helperSigner).sendFrom(
+            helper, // 'from' address to send tokens
             remoteChainId, // remote LayerZero chainId
             toAddressBytes, // 'to' address to send tokens
             qty, // amount of tokens to send (in wei)
             {
-                refundAddress: owner,
+                refundAddress: helper,
                 zroPaymentAddress: ethers.ZeroAddress,
                 adapterParams,
             },
@@ -54,5 +56,5 @@ module.exports = async function (taskArgs: any, hre: any) {
     ).wait()
     console.log(`✅ Message Sent [${hre.network.name}] sendTokens() to OFT @ LZ chainId[${remoteChainId}] token:[${remoteContract}]`)
     console.log(` tx: ${tx?.hash}`)
-    console.log(`* check your address [${owner.address}] on the destination chain, in the ERC20 transaction tab !"`)
+    console.log(`* check your address [${helperSigner.address}] on the destination chain, in the ERC20 transaction tab !"`)
 }

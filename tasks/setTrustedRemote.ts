@@ -5,6 +5,8 @@ import { ethers } from 'ethers'
 
 module.exports = async function (taskArgs: any, hre: any) {
 	let localContract, remoteContract
+	const { helper } = await hre.getNamedAccounts()
+	const helperSigner = await hre.ethers.getSigner(helper)
 
 	if (taskArgs.contract) {
 		localContract = taskArgs.contract
@@ -47,7 +49,7 @@ module.exports = async function (taskArgs: any, hre: any) {
 	if (!isTrustedRemoteSet) {
 		try {
 			let tx = await (
-				await localContractInstance.setTrustedRemote(
+				await localContractInstance.connect(helperSigner).setTrustedRemote(
 					remoteChainId,
 					remoteAndLocal,
 				)
@@ -57,6 +59,8 @@ module.exports = async function (taskArgs: any, hre: any) {
 			)
 			console.log(` tx: ${tx?.hash}`)
 		} catch (e: any) {
+			console.log(e);
+
 			if (
 				e.error.message.includes('The chainId + address is already trusted')
 			) {

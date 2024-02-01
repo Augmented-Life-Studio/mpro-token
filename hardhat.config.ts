@@ -38,7 +38,7 @@ function accounts(chainKey: string) {
 const config: HardhatUserConfig = {
 	namedAccounts: {
 		deployer: {
-			default: 2, // wallet address 0, of the mnemonic in .env
+			default: 3, // wallet address 0, of the mnemonic in .env
 		},
 		owner: {
 			default: "0xfe015fEC2E10c29d2481fa22520C08c23805fb97", // Whoa
