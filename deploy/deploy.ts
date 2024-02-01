@@ -5,7 +5,7 @@ import { DeploymentsExtension } from "hardhat-deploy/dist/types";
 import { verifyContractWithRetry } from "../utils/verifyContract";
 import { JAKANTMasterDistributor } from "../typechain-types";
 
-// npx hardhat deploy --tags JAKANTToken --network bsc-testnet
+// npx hardhat deploy --tags JAKANTToken --network goerli
 
 module.exports = async function ({ deployments, getNamedAccounts }: {
     deployments: DeploymentsExtension, getNamedAccounts: any
