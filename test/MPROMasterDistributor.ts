@@ -1,15 +1,18 @@
 import { ethers, getNamedAccounts, network } from 'hardhat';
 import { expect } from 'chai';
-import { MPROMasterDistributor, MPROToken, MPROToken__factory } from '../typechain-types';
+import { MPROMasterDistributor } from '../typechain-types';
+import { MPRO } from "../typechain-types/contracts/MPRO.sol";
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { mine } from '@nomicfoundation/hardhat-toolbox/network-helpers';
+import { MPROMasterDistributor__factory } from '../typechain-types/factories/contracts/MPROMasterDistributor.sol';
+import { MPRO__factory } from '../typechain-types/factories/contracts/MPRO.sol';
 
 // npx hardhat test test/MPROMasterDistributor.ts
 
 const ONE_DAY = 24 * 60 * 60;
 
 describe('MPROMasterDistributor', () => {
-  let mproToken: MPROToken;
+  let mproToken: MPRO;
   let mproMasterDistributor: MPROMasterDistributor;
   let deployer: HardhatEthersSigner, owner: HardhatEthersSigner, lister: HardhatEthersSigner, vesting: HardhatEthersSigner, distributor: HardhatEthersSigner, distributionTimeRoleManager: HardhatEthersSigner, distributionTimeManager: HardhatEthersSigner, addrs: HardhatEthersSigner[];
   let masterDistributorDeploymentTimestamp: number;
@@ -29,7 +32,7 @@ describe('MPROMasterDistributor', () => {
     ] = await ethers.getSigners()
 
 
-    const MasterDistributorFactory = await ethers.getContractFactory("MPROMasterDistributor");
+    const MasterDistributorFactory = await ethers.getContractFactory("contracts/MPROMasterDistributor.sol:MPROMasterDistributor") as MPROMasterDistributor__factory;
     mproMasterDistributor = await MasterDistributorFactory.deploy(owner.address);
 
     const mproMasterDistributorDeploymentBlockNumber = mproMasterDistributor.deploymentTransaction()?.blockNumber as number;
@@ -40,12 +43,12 @@ describe('MPROMasterDistributor', () => {
     await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE(), distributor.address);
     await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.LISTER_ROLE(), lister.address);
 
-    const MPROToken: MPROToken__factory = await ethers.getContractFactory('MPROToken');
-    mproToken = await MPROToken.deploy(
+    const MPRO: MPRO__factory = await ethers.getContractFactory('contracts/MPRO.sol:MPRO') as MPRO__factory;
+    mproToken = await MPRO.deploy(
       'MPRO', 'MPRO', [vesting], [ethers.parseUnits("100")], '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1', mproMasterDistributor.target, owner.address
     );
 
-    await mproMasterDistributor.connect(owner).setMPROToken(mproToken.target);
+    await mproMasterDistributor.connect(owner).setMPRO(mproToken.target);
     INITIAL_DAILY_DISTRIBUTION = await mproMasterDistributor.initialDaylyDistribution();
   });
 
@@ -245,12 +248,12 @@ describe('MPROMasterDistributor', () => {
       expect(amountAfterSecondReduction).to.equal(ethers.parseUnits((250000 * 183 + 183 * 300000 + 14 * 400000).toString()) + INITIAL_DAILY_DISTRIBUTION + ethers.parseUnits("300000") + ethers.parseUnits("400000"));
     })
   })
-  describe("setMPROToken function", () => {
+  describe("setMPRO function", () => {
     it("Should return error if called by non owner", async () => {
-      await expect(mproMasterDistributor.connect(deployer).setMPROToken(mproToken.target)).to.be.revertedWith(`Ownable: caller is not the owner`);
+      await expect(mproMasterDistributor.connect(deployer).setMPRO(mproToken.target)).to.be.revertedWith(`Ownable: caller is not the owner`);
     })
     it("Should return error when token is already set", async () => {
-      await expect(mproMasterDistributor.connect(owner).setMPROToken(mproToken.target)).to.be.revertedWith("MPROMasterDistributor: MPRO token is already set");
+      await expect(mproMasterDistributor.connect(owner).setMPRO(mproToken.target)).to.be.revertedWith("MPROMasterDistributor: MPRO token is already set");
     })
   })
   describe("getBurnAmount function", () => {

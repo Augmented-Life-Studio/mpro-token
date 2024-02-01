@@ -5,20 +5,20 @@ import { DeploymentsExtension } from "hardhat-deploy/dist/types";
 import { verifyContractWithRetry } from "../utils/verifyContract";
 import { MPROMasterDistributor } from "../typechain-types";
 
-// npx hardhat deploy --tags MPROToken --network bsc-testnet
+// npx hardhat deploy --tags MPROSource --network bsc-testnet
 
 module.exports = async function ({ deployments, getNamedAccounts }: {
     deployments: DeploymentsExtension, getNamedAccounts: any
 }) {
     const { deployer, owner } = await getNamedAccounts()
 
-    const TOKEN_NAME = "MPROToken";
+    const TOKEN_NAME = "MPRO";
     const TOKEN_SYMBOL = "MPRO";
 
     const { deploy } = deployments
     const lzEndpointAddress = LZ_ENDPOINTS[hre.network.name as keyof typeof LZ_ENDPOINTS]
 
-    const mproMasterDistributor = await deploy("MPROMasterDistributor", {
+    const mproMasterDistributor = await deploy("contracts/MPROMasterDistributor.sol:MPROMasterDistributor", {
         from: deployer,
         args: [owner],
         log: true,
@@ -27,9 +27,9 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     console.log("MPROMasterDistributor deployed to:", mproMasterDistributor.address);
 
-    await verifyContractWithRetry("MPROMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
+    await verifyContractWithRetry("contracts/MPROMasterDistributor.sol:MPROMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
 
-    const mproToken = await deploy("MPROToken", {
+    const mproToken = await deploy("contracts/MPRO.sol:MPRO", {
         from: deployer,
         args: [
             TOKEN_NAME,
@@ -44,9 +44,9 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
         waitConfirmations: 1,
     })
 
-    console.log("MPROToken deployed to:", mproToken);
+    console.log("MPRO deployed to:", mproToken);
 
-    await verifyContractWithRetry("MPROToken", mproToken.address, mproToken.args);
+    await verifyContractWithRetry("contracts/MPRO.sol:MPRO", mproToken.address, mproToken.args);
 }
 
-module.exports.tags = ["MPROToken"]
+module.exports.tags = ["MPROSource"]

@@ -1,28 +1,31 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { MPROToken, MPROToken__factory, MPROMasterDistributor, MPROMasterDistributor__factory } from "../typechain-types";
+import { MPRO } from "../typechain-types";
+import { MPROMasterDistributor } from "../typechain-types/contracts/MPROMasterDistributor.sol/MPROMasterDistributor";
+import { MPROMasterDistributor__factory } from "../typechain-types/factories/contracts/MPROMasterDistributor.sol";
+import { MPRO__factory } from "../typechain-types/factories/contracts/MPRO.sol";
 
-// npx hardhat test test/MPROToken.ts
+// npx hardhat test test/MPRO.ts
 
-describe("MPROToken", function () {
-  let mproToken: MPROToken;
+describe("MPRO", function () {
+  let mproToken: MPRO;
   let masterDistributor: MPROMasterDistributor;
   let deployer: HardhatEthersSigner, owner: HardhatEthersSigner, lister: HardhatEthersSigner, addr1: HardhatEthersSigner, addr2: HardhatEthersSigner, addr3: HardhatEthersSigner;
 
   beforeEach(async function () {
     [deployer, owner, lister, addr1, addr2, addr3] = await ethers.getSigners();
 
-    const MasterDistributorFactory: MPROMasterDistributor__factory = await ethers.getContractFactory("MPROMasterDistributor");
+    const MasterDistributorFactory = await ethers.getContractFactory("contracts/MPROMasterDistributor.sol:MPROMasterDistributor") as MPROMasterDistributor__factory;
     masterDistributor = await MasterDistributorFactory.deploy(owner.address);
     const masterDistributorAddress = await masterDistributor.getAddress();
 
     await masterDistributor.connect(owner).grantRole(await masterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE(), owner.address);
     await masterDistributor.connect(owner).grantRole(await masterDistributor.LISTER_ROLE(), lister.address);
 
-    const MPROTokenFactory: MPROToken__factory = await ethers.getContractFactory("MPROToken");
-    mproToken = await MPROTokenFactory.deploy(
-      "MPROToken",
+    const MPROFactory = await ethers.getContractFactory("contracts/MPRO.sol:MPRO") as MPRO__factory;
+    mproToken = await MPROFactory.deploy(
+      "MPRO",
       "MPRO",
       [owner.address], // Premint addresses
       [ethers.parseEther("100")], // Premint values
@@ -35,7 +38,7 @@ describe("MPROToken", function () {
 
   describe("Deployment", function () {
     it("Should properly deploy and set initial values", async function () {
-      expect(await mproToken.name()).to.equal("MPROToken");
+      expect(await mproToken.name()).to.equal("MPRO");
       expect(await mproToken.symbol()).to.equal("MPRO");
       expect(await mproToken.balanceOf(owner.address)).to.equal(ethers.parseEther("100"));
       expect(await mproToken.owner()).to.equal(owner.address);

@@ -12,10 +12,6 @@ interface IMPROMasterDistributor {
         uint256 _amount
     ) external view returns (uint256);
 
-    function isDistributor(address account) external view returns (bool);
-
-    function mintAllowed(address minter) external view returns (bool);
-
     function approveAllowed(address, address) external view returns (bool);
 
     function transferAllowed(
@@ -25,30 +21,11 @@ interface IMPROMasterDistributor {
     ) external view returns (bool);
 }
 
-contract MPROToken is OFTV2, ERC20Votes {
+contract MPRO is OFTV2, ERC20Votes {
     IMPROMasterDistributor private mproMasterDistributor;
 
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
-
-    /**
-     * @dev Public constant representing the maximum cap on the token's total supply.
-     *
-     * This constant defines the maximum number of tokens that can ever be minted in the lifetime
-     * of the contract. The cap is set to 500 million tokens, considering the decimal factor of
-     * the token. Since Solidity does not support floating-point numbers, the token amounts are
-     * often expressed in the smallest units, similar to how cents are used for dollars in the
-     * traditional currency system. Here, `10 ** 18` represents 1 token in its smallest unit (like wei
-     * in Ethereum), making the cap effectively 500 million tokens.
-     *
-     * The purpose of setting a maximum cap is to provide assurances about the maximum supply of
-     * tokens that can exist, which is an important aspect of the token's economic and governance
-     * model. It ensures transparency and trust in the token's scarcity and value.
-     */
-
-    uint256 private constant _maxCap = 500_000_000 * 10 ** 18;
-
-    uint256 private _totalSupply;
 
     /**
      * @dev Constructor to initialize the contract with specific parameters.
@@ -74,103 +51,31 @@ contract MPROToken is OFTV2, ERC20Votes {
      *
      * @param _name The name of the token.
      * @param _symbol The symbol of the token.
-     * @param premintAddresses Array of addresses that will receive the preminted tokens.
-     * @param premintValues Array of token amounts corresponding to each premint address.
      * @param _lzEndpoint Address for the LayerZero endpoint, used in OFTV2 initialization.
      * @param _mproMasterDistributor Address of the contract managing token distributions.
      */
     constructor(
         string memory _name,
         string memory _symbol,
-        address[] memory premintAddresses,
-        uint256[] memory premintValues,
         address _lzEndpoint,
         address _mproMasterDistributor,
         address _owner
     ) OFTV2(_name, _symbol, 6, _lzEndpoint) ERC20Permit(_name) {
-        for (uint256 i = 0; i < premintAddresses.length; i++) {
-            super._mint(premintAddresses[i], premintValues[i]);
-        }
         mproMasterDistributor = IMPROMasterDistributor(_mproMasterDistributor);
         _transferOwnership(_owner);
     }
 
-    /**
-     * @dev Internal function to mint tokens.
-     *
-     * This function is an override of the `_mint` function in both ERC20 and ERC20Votes contracts.
-     * It is marked as `internal`, meaning it can only be called from within this contract or its
-     * derivatives. The `virtual` keyword indicates that this function can be overridden in derived
-     * contracts, providing flexibility in extending the token minting logic.
-     *
-     * The function calls `super._mint` to invoke the minting logic defined in the parent contracts
-     * (ERC20 and ERC20Votes). This ensures that the token minting process adheres to the standard
-     * ERC20 implementation, while also updating any additional state or logic defined in ERC20Votes,
-     * such as vote tracking.
-     *
-     * The overriding of this function may be used to introduce additional logic before or after the
-     * standard minting process, such as custom events, access controls, or other state updates
-     * specific to the derived contract's requirements.
-     *
-     * @param account The address that will receive the minted tokens.
-     * @param amount The amount of tokens to be minted.
-     */
     function _mint(
         address account,
         uint256 amount
-    ) internal virtual override(ERC20, ERC20Votes) {
+    ) internal override(ERC20, ERC20Votes) {
         super._mint(account, amount);
     }
 
-    /**
-     * @dev External function to mint new tokens.
-     *
-     * This function allows for the external minting of tokens, but restricts access to only those
-     * accounts that have been granted distributor privileges by the mproRoleManager. The
-     * `isDistributor` function of the mproRoleManager is used to check if the caller (_msgSender())
-     * has the necessary role to perform the minting.
-     *
-     * The `virtual` keyword indicates that this function can be overridden in derived contracts,
-     * allowing for customization of the minting process or introduction of additional logic.
-     *
-     * If the caller is authorized as a distributor, the function proceeds to call the internal `_mint`
-     * function, which handles the actual creation and allocation of tokens to the specified account.
-     * This two-tier structure (external `mint` calling internal `_mint`) allows for separation of
-     * concerns, where access control is handled externally, while the token creation logic is
-     * encapsulated within the internal function.
-     *
-     * @param account The address to which the minted tokens will be allocated.
-     * @param amount The amount of tokens to be minted and allocated to the account.
-     */
-    function mint(address account, uint256 amount) external virtual {
-        mproMasterDistributor.mintAllowed(_msgSender());
-        _mint(account, amount);
-    }
-
-    /**
-     * @dev Internal function to burn tokens.
-     *
-     * This function is an override of the `_burn` function in both ERC20 and ERC20Votes contracts.
-     * It is marked as `internal`, meaning it can only be called from within this contract or its
-     * derivatives. The `virtual` keyword indicates that this function can be overridden in derived
-     * contracts, providing the flexibility to modify the token burning logic.
-     *
-     * The function delegates to `super._burn` to execute the burning logic defined in the parent
-     * contracts (ERC20 and ERC20Votes). This ensures that the token burning process complies with
-     * the ERC20 standard, while also accommodating any additional state or logic updates defined in
-     * ERC20Votes, such as vote tracking adjustments.
-     *
-     * Overriding this function allows the introduction of additional functionality specific to the
-     * contract's requirements, which could include custom events, access controls, or other state
-     * modifications that need to occur alongside the standard token burning process.
-     *
-     * @param account The address from which the tokens will be burned.
-     * @param amount The amount of tokens to be burned from the specified account.
-     */
     function _burn(
         address account,
         uint256 amount
-    ) internal virtual override(ERC20, ERC20Votes) {
+    ) internal override(ERC20, ERC20Votes) {
         super._burn(account, amount);
     }
 
@@ -364,12 +269,6 @@ contract MPROToken is OFTV2, ERC20Votes {
         address to,
         uint256 amount
     ) internal override(ERC20) {
-        if (from == address(0)) {
-            require(
-                _totalSupply + amount <= _maxCap,
-                "ERC20Capped: cap exceeded"
-            );
-        }
         super._beforeTokenTransfer(from, to, amount);
     }
 
@@ -400,13 +299,6 @@ contract MPROToken is OFTV2, ERC20Votes {
         address to,
         uint256 amount
     ) internal override(ERC20, ERC20Votes) {
-        if (from == address(0)) {
-            _totalSupply = _totalSupply.add(amount);
-        }
         super._afterTokenTransfer(from, to, amount);
-    }
-
-    function maxCap() external pure returns (uint256) {
-        return _maxCap;
     }
 }

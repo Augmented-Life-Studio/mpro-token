@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-interface IMPROToken is IERC20 {
+interface IMPRO is IERC20 {
     function mint(address account, uint256 amount) external;
 }
 
@@ -57,7 +57,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         keccak256("DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER");
     bytes32 public constant LISTER_ROLE = keccak256("LISTER_ROLE");
 
-    IMPROToken private mproToken;
+    IMPRO private mproToken;
 
     mapping(bytes32 => bool) private assignedRoles;
 
@@ -188,7 +188,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         uint256 _redutionTimestamp,
         uint256 _reductionAmount
     );
-    event SetMPROToken(address _mproTokenAddress);
+    event SetMPRO(address _mproTokenAddress);
     event SetBurnRate(uint256 _burnRate);
     event SetDistributorTimeAdministratorRoleManager(
         address _roleManagerAddress
@@ -581,17 +581,17 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * immutable once set to prevent unauthorized changes.
      *
      * If the token address has not been set before, the function updates the `mproToken` state variable and emits
-     * a `SetMPROToken` event with the new MPRO token address.
+     * a `SetMPRO` event with the new MPRO token address.
      *
      * @param _mproTokenAddress The address of the MPRO token contract to be set.
      */
-    function setMPROToken(address _mproTokenAddress) external onlyOwner {
+    function setMPRO(address _mproTokenAddress) external onlyOwner {
         require(
-            mproToken == IMPROToken(address(0)),
+            mproToken == IMPRO(address(0)),
             "MPROMasterDistributor: MPRO token is already set"
         );
-        mproToken = IMPROToken(_mproTokenAddress);
-        emit SetMPROToken(_mproTokenAddress);
+        mproToken = IMPRO(_mproTokenAddress);
+        emit SetMPRO(_mproTokenAddress);
     }
 
     /**
