@@ -33,6 +33,8 @@ task(
 	'send tokens to another chain',
 	require('./oftSendTokens'),
 )
+	.addParam('fromAddress', 'address to send tokens from')
+	.addParam('toAddress', 'address to send tokens to')
 	.addParam('qty', 'qty of tokens to send')
 	.addParam(
 		'targetNetwork',

@@ -18,18 +18,20 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     const { deploy } = deployments
     const lzEndpointAddress = LZ_ENDPOINTS[hre.network.name as keyof typeof LZ_ENDPOINTS]
 
-    const mproMasterDistributor = await deploy("contracts/MPROMasterDistributorLight.sol:MPROMasterDistributor", {
+    const mproMasterDistributor = await deploy("MPROMasterDistributorLight", {
         from: deployer,
         args: [owner],
         log: true,
         waitConfirmations: 1,
+        skipIfAlreadyDeployed: true,
+        contract: "contracts/MPROMasterDistributorLight.sol:MPROMasterDistributor"
     })
 
     console.log("MPROMasterDistributor deployed to:", mproMasterDistributor.address);
 
     await verifyContractWithRetry("contracts/MPROMasterDistributorLight.sol:MPROMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
 
-    const mproToken = await deploy("contracts/MPROLight.sol:MPRO", {
+    const mproToken = await deploy("MPROLight", {
         from: deployer,
         args: [
             TOKEN_NAME,
@@ -40,6 +42,8 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
         ],
         log: true,
         waitConfirmations: 1,
+        skipIfAlreadyDeployed: true,
+        contract: "contracts/MPROLight.sol:MPRO"
     })
 
     console.log("MPRO deployed to:", mproToken);
