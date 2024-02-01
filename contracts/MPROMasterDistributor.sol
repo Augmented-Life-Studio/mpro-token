@@ -251,7 +251,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * or limitations imposed on them by the contract, and this modifier helps prevent blocklisted
      * addresses from participating in specific operations.
      *
-     * If the `_account` address is blocklisted, the contract will revert with the message "Action on blocklisted account"
+     * If the `_account` address is blocklisted, the contract will revert with the message "MPROMasterDistributor: Action on blocklisted account"
      * If the address is not blocklisted, the modified function or operation is executed as intended.
      */
     modifier notBlocklisted(address _account) {
@@ -452,14 +452,15 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         require(_amount > 0, "amount must be greater than 0");
         require(
             block.timestamp >= distributionStartTimestamp,
-            "MPROMasterDistributor: Minting is not enabled yet"
+            "MPROMasterDistributor: Distribution is not enabled yet"
         );
         require(
             _amount <= getAvailableForDistributionTokenQuantity(),
-            "MPROMasterDistributor: Minting limit exceeded"
+            "MPROMasterDistributor: Distribution limit exceeded"
         );
-        distributedTokens += _amount;
+
         mproToken.mint(_to, _amount);
+        distributedTokens += _amount;
 
         emit Distributed(_to, _amount);
     }
@@ -1034,7 +1035,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      *
      * It returns true if the `_minter` address is the same as the address of this contract,
      * indicating that minting is allowed. Otherwise, it reverts the transaction with the message
-     * "Distributor only", enforcing the rule that only the contract itself can initiate minting operations.
+     * "MPROMasterDistributor: Distributor only", enforcing the rule that only the contract itself can initiate minting operations.
      *
      * @param _minter The address to be checked for minting permissions.
      * @return A boolean value indicating whether minting is allowed for the specified `_minter` address.

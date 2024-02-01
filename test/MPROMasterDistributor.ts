@@ -86,7 +86,7 @@ describe('MPROMasterDistributor', () => {
   })
   describe("Distribute function", () => {
     it("Should return error before distribution starts", async () => {
-      await expect(mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("10"))).to.be.revertedWith("MPROMasterDistributor: Minting is not enabled yet");
+      await expect(mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("10"))).to.be.revertedWith("MPROMasterDistributor: Distribution is not enabled yet");
     });
     it("Should enable distribution after distribution start time", async () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1]);
@@ -97,26 +97,36 @@ describe('MPROMasterDistributor', () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1]);
       await mine();
       await mproMasterDistributor.connect(distributor).distribute(deployer.address, INITIAL_DAILY_DISTRIBUTION);
-      await expect(mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("1"))).to.be.revertedWith("MPROMasterDistributor: Minting limit exceeded");
+      await expect(mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("1"))).to.be.revertedWith("MPROMasterDistributor: Distribution limit exceeded");
     })
     it("Should be able to mint 250000 dayly for 4 days", async () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 100]);
       await mine();
       await mproMasterDistributor.connect(distributor).distribute(deployer.address, INITIAL_DAILY_DISTRIBUTION);
-      await network.provider.send("evm_increaseTime", [86400]);
+      await network.provider.send("evm_increaseTime", [ONE_DAY]);
       await mine();
       await mproMasterDistributor.connect(distributor).distribute(deployer.address, INITIAL_DAILY_DISTRIBUTION);
-      await network.provider.send("evm_increaseTime", [86400]);
+      await network.provider.send("evm_increaseTime", [ONE_DAY]);
       await mine();
       await mproMasterDistributor.connect(distributor).distribute(deployer.address, INITIAL_DAILY_DISTRIBUTION);
-      await network.provider.send("evm_increaseTime", [86400]);
+      await network.provider.send("evm_increaseTime", [ONE_DAY]);
       await mine();
       await mproMasterDistributor.connect(distributor).distribute(deployer.address, INITIAL_DAILY_DISTRIBUTION);
+    })
+    it("Should be able to mint up to maxCap after long period of time", async () => {
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1999 * ONE_DAY]);
+      await mine();
+      await mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("499999900"));
+    })
+    it("Should return error when trying to mint more than maxCap", async () => {
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1999 * ONE_DAY]);
+      await mine();
+      await expect(mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("500000000"))).to.be.revertedWith("ERC20Capped: cap exceeded");
     })
   })
   describe("DistributeBulk function", () => {
     it("Should return error before distribution starts", async () => {
-      await expect(mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("10")])).to.be.revertedWith("MPROMasterDistributor: Minting is not enabled yet");
+      await expect(mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("10")])).to.be.revertedWith("MPROMasterDistributor: Distribution is not enabled yet");
     })
     it("Should enable distribution after distribution start time", async () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1]);
@@ -127,19 +137,19 @@ describe('MPROMasterDistributor', () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 1]);
       await mine();
       await mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("250000")]);
-      await expect(mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("1")])).to.be.revertedWith("MPROMasterDistributor: Minting limit exceeded");
+      await expect(mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("1")])).to.be.revertedWith("MPROMasterDistributor: Distribution limit exceeded");
     })
     it("Should be able to mint 250000 dayly for 4 days", async () => {
       await network.provider.send("evm_increaseTime", [DISTRIBUTION_START_DELAY + 100]);
       await mine();
       await mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("250000")]);
-      await network.provider.send("evm_increaseTime", [86400]);
+      await network.provider.send("evm_increaseTime", [ONE_DAY]);
       await mine();
       await mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("250000")]);
-      await network.provider.send("evm_increaseTime", [86400]);
+      await network.provider.send("evm_increaseTime", [ONE_DAY]);
       await mine();
       await mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("250000")]);
-      await network.provider.send("evm_increaseTime", [86400]);
+      await network.provider.send("evm_increaseTime", [ONE_DAY]);
       await mine();
       await mproMasterDistributor.connect(distributor).distributeBulk([deployer.address], [ethers.parseUnits("250000")]);
     })

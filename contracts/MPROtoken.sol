@@ -46,7 +46,9 @@ contract MPROToken is OFTV2, ERC20Votes {
      * model. It ensures transparency and trust in the token's scarcity and value.
      */
 
-    uint256 public constant _maxCap = 500_000_000 * 10 ** 18;
+    uint256 private constant _maxCap = 500_000_000 * 10 ** 18;
+
+    uint256 private _totalSupply;
 
     /**
      * @dev Constructor to initialize the contract with specific parameters.
@@ -364,7 +366,7 @@ contract MPROToken is OFTV2, ERC20Votes {
     ) internal override(ERC20) {
         if (from == address(0)) {
             require(
-                totalSupply() + amount <= _maxCap,
+                _totalSupply + amount <= _maxCap,
                 "ERC20Capped: cap exceeded"
             );
         }
@@ -398,6 +400,13 @@ contract MPROToken is OFTV2, ERC20Votes {
         address to,
         uint256 amount
     ) internal override(ERC20, ERC20Votes) {
+        if (from == address(0)) {
+            _totalSupply = _totalSupply.add(amount);
+        }
         super._afterTokenTransfer(from, to, amount);
+    }
+
+    function maxCap() external pure returns (uint256) {
+        return _maxCap;
     }
 }
