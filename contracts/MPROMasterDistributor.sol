@@ -9,6 +9,8 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 interface IJAKANTToken is IERC20 {
     function mint(address account, uint256 amount) external;
+
+    function maxCap() external pure returns (uint256);
 }
 
 /**
@@ -252,7 +254,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      * or limitations imposed on them by the contract, and this modifier helps prevent blocklisted
      * addresses from participating in specific operations.
      *
-     * If the `_account` address is blocklisted, the contract will revert with the message "Action on blocklisted account"
+     * If the `_account` address is blocklisted, the contract will revert with the message "MPROMasterDistributor: Action on blocklisted account"
      * If the address is not blocklisted, the modified function or operation is executed as intended.
      */
     modifier notBlocklisted(address _account) {
@@ -437,7 +439,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      *   ensuring that the distribution period has started.
      * - It checks that the total amount of tokens to be distributed (including the current distribution)
      *   does not exceed the quantity available for distribution as determined by
-     *   getAvailableForDistributionTokenQuantity.
+     *   getAvailableForDistributionTokenQuantity and the maxCap of the MPRO token.
      *
      * If all checks pass, the function increments the distributedTokens state variable by the amount
      * to be distributed and calls the mint function on the mproToken contract to mint the tokens
@@ -456,11 +458,13 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
             "JAKANTMasterDistributor: Minting is not enabled yet"
         );
         require(
-            _amount <= getAvailableForDistributionTokenQuantity(),
+            mproToken.maxCap() >= distributedTokens + _amount &&
+                _amount <= getAvailableForDistributionTokenQuantity(),
             "JAKANTMasterDistributor: Minting limit exceeded"
         );
-        distributedTokens += _amount;
+
         mproToken.mint(_to, _amount);
+        distributedTokens += _amount;
 
         emit Distributed(_to, _amount);
     }
@@ -1035,7 +1039,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      *
      * It returns true if the `_minter` address is the same as the address of this contract,
      * indicating that minting is allowed. Otherwise, it reverts the transaction with the message
-     * "Distributor only", enforcing the rule that only the contract itself can initiate minting operations.
+     * "MPROMasterDistributor: Distributor only", enforcing the rule that only the contract itself can initiate minting operations.
      *
      * @param _minter The address to be checked for minting permissions.
      * @return A boolean value indicating whether minting is allowed for the specified `_minter` address.

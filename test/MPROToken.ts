@@ -39,12 +39,13 @@ describe("JAKANTToken", function () {
       expect(await mproToken.symbol()).to.equal("MPRO");
       expect(await mproToken.balanceOf(owner.address)).to.equal(ethers.parseEther("100"));
       expect(await mproToken.owner()).to.equal(owner.address);
+      expect(await mproToken.totalSupply()).to.equal(ethers.parseEther("100"));
     });
   });
 
   describe("Minting", function () {
     it("Should fail to mint tokens when called by non-distributor", async function () {
-      await expect(mproToken.connect(addr1).mint(addr2.address, ethers.parseEther("50"))).to.be.revertedWith("Distributor only");
+      await expect(mproToken.connect(addr1).mint(addr2.address, ethers.parseEther("50"))).to.be.revertedWith("MPROMasterDistributor: Distributor only");
     });
   });
 
@@ -52,6 +53,7 @@ describe("JAKANTToken", function () {
     it("Should burn tokens correctly", async function () {
       await mproToken.connect(owner).burn(owner.address, ethers.parseEther("10"));
       expect(await mproToken.balanceOf(owner.address)).to.equal(ethers.parseEther("90"));
+      expect(await mproToken.totalSupply()).to.equal(ethers.parseEther("90"));
     });
   });
 
@@ -76,23 +78,23 @@ describe("JAKANTToken", function () {
     });
     it("Should fail to transfer when caller is on blocklist", async function () {
       await masterDistributor.connect(lister).blocklist(addr1.address, true);
-      await expect(mproToken.connect(addr1).transfer(addr2.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+      await expect(mproToken.connect(addr1).transfer(addr2.address, ethers.parseEther("10"))).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
     })
     it("Should fail to transfer when to is on blocklist", async function () {
       await masterDistributor.connect(lister).blocklist(addr2.address, true);
-      await expect(mproToken.connect(addr1).transfer(addr2.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+      await expect(mproToken.connect(addr1).transfer(addr2.address, ethers.parseEther("10"))).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
     })
     it("Should fail to transferFrom when caller is on blocklist", async function () {
       await masterDistributor.connect(lister).blocklist(addr1.address, true);
-      await expect(mproToken.connect(addr1).transferFrom(addr2.address, addr3.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+      await expect(mproToken.connect(addr1).transferFrom(addr2.address, addr3.address, ethers.parseEther("10"))).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
     })
     it("Should fail to transferFrom when from is on blocklist", async function () {
       await masterDistributor.connect(lister).blocklist(addr3.address, true);
-      await expect(mproToken.connect(addr1).transferFrom(addr2.address, addr3.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+      await expect(mproToken.connect(addr1).transferFrom(addr2.address, addr3.address, ethers.parseEther("10"))).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
     })
     it("Should fail to transferFrom when to is on blocklist", async function () {
       await masterDistributor.connect(lister).blocklist(addr3.address, true);
-      await expect(mproToken.connect(addr1).transferFrom(addr2.address, addr3.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+      await expect(mproToken.connect(addr1).transferFrom(addr2.address, addr3.address, ethers.parseEther("10"))).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
     })
   });
 
@@ -103,7 +105,7 @@ describe("JAKANTToken", function () {
     });
     it("Should fail to approve when caller is on blocklist", async function () {
       await masterDistributor.connect(lister).blocklist(addr1.address, true);
-      await expect(mproToken.connect(addr1).approve(addr2.address, ethers.parseEther("10"))).to.be.revertedWith("Action on blocklisted account");
+      await expect(mproToken.connect(addr1).approve(addr2.address, ethers.parseEther("10"))).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account");
     })
   });
 });
