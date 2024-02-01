@@ -19,7 +19,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     const { deploy } = deployments
     const lzEndpointAddress = LZ_ENDPOINTS[hre.network.name as keyof typeof LZ_ENDPOINTS]
 
-    const mproMasterDistributor = await deploy("JAKANTMasterDistributor", {
+    const mproMasterDistributor = await deploy("contracts/JAKANTMasterDistributor.sol:JAKANTMasterDistributor", {
         from: deployer,
         args: [deployer],
         log: true,
@@ -29,13 +29,13 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     console.log("JAKANTMasterDistributor deployed to:", mproMasterDistributor.address);
 
-    await verifyContractWithRetry("contracts/MPROMasterDistributor.sol:JAKANTMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
+    await verifyContractWithRetry("contracts/JAKANTMasterDistributor.sol:JAKANTMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
 
 
-    const MproMasterDistributorFactory = await ethers.getContractFactory("JAKANTMasterDistributor")
+    const MproMasterDistributorFactory = await ethers.getContractFactory("contracts/JAKANTMasterDistributor.sol:JAKANTMasterDistributor")
     const MproMasterDistributor = await MproMasterDistributorFactory.attach(mproMasterDistributor.address) as JAKANTMasterDistributor;
 
-    const mproToken = await deploy("JAKANTToken", {
+    const mproToken = await deploy("contracts/MPRO.sol:JAKANTToken", {
         from: deployer,
         args: [
             TOKEN_NAME,

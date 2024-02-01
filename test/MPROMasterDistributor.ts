@@ -1,8 +1,11 @@
 import { ethers, getNamedAccounts, network } from 'hardhat';
 import { expect } from 'chai';
-import { JAKANTMasterDistributor, JAKANTToken, JAKANTToken__factory } from '../typechain-types';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { mine } from '@nomicfoundation/hardhat-toolbox/network-helpers';
+import { JAKANTToken } from '../typechain-types/contracts/MPRO.sol/JAKANTToken';
+import { JAKANTMasterDistributor } from '../typechain-types/contracts/MPROMasterDistributor.sol';
+import { JAKANTMasterDistributor__factory } from '../typechain-types/factories/contracts/MPROMasterDistributor.sol';
+import { JAKANTToken__factory } from '../typechain-types/factories/contracts/MPRO.sol';
 
 // npx hardhat test test/JAKANTMasterDistributor.ts
 
@@ -29,7 +32,7 @@ describe('JAKANTMasterDistributor', () => {
     ] = await ethers.getSigners()
 
 
-    const MasterDistributorFactory = await ethers.getContractFactory("JAKANTMasterDistributor");
+    const MasterDistributorFactory = await ethers.getContractFactory("contracts/JAKANTMasterDistributor.sol:JAKANTMasterDistributor") as JAKANTMasterDistributor__factory;
     mproMasterDistributor = await MasterDistributorFactory.deploy(owner.address);
 
     const mproMasterDistributorDeploymentBlockNumber = mproMasterDistributor.deploymentTransaction()?.blockNumber as number;
@@ -40,7 +43,7 @@ describe('JAKANTMasterDistributor', () => {
     await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.JAKANT_MASTER_DISTRIBUTOR_ROLE(), distributor.address);
     await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.LISTER_ROLE(), lister.address);
 
-    const JAKANTToken: JAKANTToken__factory = await ethers.getContractFactory('JAKANTToken');
+    const JAKANTToken: JAKANTToken__factory = await ethers.getContractFactory('contracts/MPRO.sol:JAKANTToken') as JAKANTToken__factory;
     mproToken = await JAKANTToken.deploy(
       'MPRO', 'MPRO', [vesting], [ethers.parseUnits("100")], '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1', mproMasterDistributor.target, owner.address
     );
@@ -190,7 +193,7 @@ describe('JAKANTMasterDistributor', () => {
       await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), 500000)).to.be.revertedWith("JAKANTMasterDistributor: New reduction amount cannot be greater than half of the last reduction amount");
     })
     it("Should return error when _reductionAmount is greater than last reduction amount multiplied by 2", async () => {
-      await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), ethers.parseUnits("600000"))).to.be.revertedWith("MPROMasterDistributor: New reduction amount cannot be greater than the last reduction amount multiplied by 2");
+      await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), ethers.parseUnits("600000"))).to.be.revertedWith("JAKANTMasterDistributor: New reduction amount cannot be greater than the last reduction amount multiplied by 2");
     })
     it("Should add distribution reduction called by distributions time administator", async () => {
       await expect(mproMasterDistributor.connect(distributionTimeManager).addDistributionReduction(initialDistributionStartTime + (183 * ONE_DAY), ethers.parseUnits("240000"))).to.not.be.reverted;

@@ -15,28 +15,28 @@ yarn test
 1. Deploy two contracts to the different networks
 
 ```shell
-npx hardhat --network bsc-testnet deploy --tags JAKANTToken
-npx hardhat --network mumbai deploy --tags JAKANTToken
+npx hardhat --network goerli deploy --tags MPROSource
+npx hardhat --network bsc-testnet deploy --tags MPRORemote
 ```
 
 2. Set the "trusted remotes" (ie: your contracts) so each of them can receive messages from one another, and `only` one another.
 
 ```shell
-npx hardhat --network bsc-testnet setTrustedRemote --target-network mumbai --contract JAKANTToken
-npx hardhat --network mumbai setTrustedRemote --target-network bsc-testnet --contract JAKANTToken
+npx hardhat --network bsc-testnet setTrustedRemote --target-network goerli --contract MPROLight
+npx hardhat --network goerli setTrustedRemote --target-network bsc-testnet --contract MPRO
 ```
 
 3. Set the "minDstGas" required on the destination chain.
 
 ```shell
-npx hardhat --network bsc-testnet setMinDstGas --packet-type 0 --target-network mumbai --contract JAKANTToken --min-gas 100000
-npx hardhat --network mumbai setMinDstGas --packet-type 0 --target-network bsc-testnet --contract JAKANTToken --min-gas 100000
+npx hardhat --network bsc-testnet setMinDstGas --packet-type 0 --target-network goerli --contract MPROLight --min-gas 100000
+npx hardhat --network goerli setMinDstGas --packet-type 0 --target-network bsc-testnet --contract MPRO --min-gas 100000
 ```
 
 4. Send tokens from one chain to another.
 
 ```shell
-npx hardhat --network bsc-testnet oftSendTokens --target-network mumbai --qty 10 --contract JAKANTToken
+npx hardhat --network goerli oftSendTokens --target-network bsc-testnet --qty 1 --contract MPRO
 ```
 
 
