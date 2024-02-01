@@ -2,21 +2,21 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { JAKANTMasterDistributor__factory, LZEndpointMock } from "../typechain-types";
-import { MPRO as MPROLight } from "../typechain-types/contracts/MPROLight.sol";
+import { MPRO as JAKANTLight } from "../typechain-types/contracts/MPROLight.sol";
 import { JAKANTToken } from "../typechain-types/contracts/MPRO.sol";
-import { MPRO__factory as MPROLight__factory } from "../typechain-types/factories/contracts/MPROLight.sol";
+import { MPRO__factory as JAKANTLight__factory } from "../typechain-types/factories/contracts/MPROLight.sol";
 import { JAKANTToken__factory } from "../typechain-types/factories/contracts/MPRO.sol";
 import { BytesLike } from "ethers";
 import { JAKANTMasterDistributor } from "../typechain-types/contracts/MPROMasterDistributor.sol";
 
-// npx hardhat test test/MPROLight.ts
+// npx hardhat test test/JAKANTLight.ts
 
-describe("MPROLight", function () {
+describe("JAKANTLight", function () {
   const localChainId = 1
   const remoteChainId = 2
   let lzEndpointMock: LZEndpointMock
   let mproToken: JAKANTToken;
-  let mproTokenLight: MPROLight;
+  let mproTokenLight: JAKANTLight;
   let masterDistributor: JAKANTMasterDistributor;
   let deployer: HardhatEthersSigner, owner: HardhatEthersSigner, lister: HardhatEthersSigner, addr1: HardhatEthersSigner, addr2: HardhatEthersSigner, addr3: HardhatEthersSigner;
   let localEndpoint, remoteEndpoint, deployerAddressBytes32: BytesLike
@@ -49,7 +49,7 @@ describe("MPROLight", function () {
       deployer.address
     );
 
-    const MPROFactoryLight = await ethers.getContractFactory("contracts/MPROLight.sol:MPRO") as MPROLight__factory;
+    const MPROFactoryLight = await ethers.getContractFactory("contracts/JAKANTLight.sol:MPRO") as JAKANTLight__factory;
     mproTokenLight = await MPROFactoryLight.deploy(
       "MPRO",
       "MPRO",

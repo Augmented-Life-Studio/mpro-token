@@ -21,7 +21,7 @@ interface IJAKANTMasterDistributor {
     ) external view returns (bool);
 }
 
-contract MPRO is OFTV2, ERC20Votes {
+contract JAKANTToken is OFTV2, ERC20Votes {
     IJAKANTMasterDistributor private mproMasterDistributor;
 
     using SafeERC20 for IERC20;
