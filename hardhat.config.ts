@@ -37,17 +37,17 @@ function accounts(chainKey: string) {
 
 const config: HardhatUserConfig = {
 	namedAccounts: {
+		// Account used for deployment
 		deployer: {
 			default: 0, // wallet address 0, of the mnemonic in .env
 		},
+		// Owner of the contract
 		owner: {
 			default: 1, // wallet address 1, of the mnemonic in .env
 		},
-		vesting: {
-			default: 2, // wallet address 2, of the mnemonic in .env
-		},
+		// Account used for tokens setting
 		helper: {
-			default: 3, // wallet address 3, of the mnemonic in .env
+			default: 2, // wallet address 3, of the mnemonic in .env
 		},
 	},
 	gasReporter: {

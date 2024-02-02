@@ -5,7 +5,8 @@ import { DeploymentsExtension } from "hardhat-deploy/dist/types";
 import { verifyContractWithRetry } from "../utils/verifyContract";
 import { MPROMasterDistributor } from "../typechain-types";
 
-// npx hardhat deploy --tags MPRORemote --network bsc-testnet
+// npx hardhat deploy --tags MPRORemote --network bsc
+// npx hardhat deploy --tags MPRORemote --network polygon
 
 module.exports = async function ({ deployments, getNamedAccounts }: {
     deployments: DeploymentsExtension, getNamedAccounts: any

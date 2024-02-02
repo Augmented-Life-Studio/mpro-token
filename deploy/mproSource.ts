@@ -5,7 +5,7 @@ import { DeploymentsExtension } from "hardhat-deploy/dist/types";
 import { verifyContractWithRetry } from "../utils/verifyContract";
 import { MPROMasterDistributor } from "../typechain-types";
 
-// npx hardhat deploy --tags MPROSource --network bsc-testnet
+// npx hardhat deploy --tags MPROSource --network ethereum
 
 module.exports = async function ({ deployments, getNamedAccounts }: {
     deployments: DeploymentsExtension, getNamedAccounts: any
