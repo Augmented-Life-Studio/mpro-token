@@ -9,6 +9,8 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 interface IJAKANTToken is IERC20 {
     function mint(address account, uint256 amount) external;
+
+    function maxCap() external pure returns (uint256);
 }
 
 /**
@@ -402,7 +404,9 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
 
         totalDistribution += daysElapsed * initialDaylyDistribution;
 
-        return totalDistribution;
+        return totalDistribution >= mproToken.maxCap()
+            ? mproToken.maxCap()
+            : totalDistribution;
     }
 
     /**
