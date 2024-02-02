@@ -20,14 +20,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
     using SafeMath for uint256;
 
-    /**
-     * @dev Constant representing the number of seconds in a day.
-     *
-     * This constant defines the number of seconds in a day, which is used for time calculations
-     * within the contract. It is set to the standard value of 86,400 seconds per day.
-     */
-    uint256 constant SECONDS_PER_DAY = 86400;
-
     bytes32 public constant LISTER_ROLE = keccak256("LISTER_ROLE");
 
     mapping(bytes32 => bool) private assignedRoles;

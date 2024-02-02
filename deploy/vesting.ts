@@ -3,7 +3,9 @@ import { ethers } from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/dist/types";
 import { verifyContractWithRetry } from "../utils/verifyContract";
 
-// npx hardhat deploy --tags MPROVesting --network bsc-testnet
+// npx hardhat deploy --tags MPROVesting --network ethereum
+
+const VESTING_CONTRACT_NAME = "MPROVesting"
 
 const MPRO_ADDRESS = ""
 const TGE_UNLOCK_TIMESTAMP = 0
@@ -19,7 +21,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     const { deploy } = deployments
 
-    const vesting = await deploy("MPROVesting", {
+    const vesting = await deploy(VESTING_CONTRACT_NAME, {
         from: deployer,
         args: [
             MPRO_ADDRESS,
@@ -35,9 +37,9 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
         skipIfAlreadyDeployed: true
     })
 
-    console.log("MPROVesting deployed to:", vesting.address);
+    console.log(`MPROVesting ${VESTING_CONTRACT_NAME}  deployed to:`, vesting.address);
 
-    await verifyContractWithRetry("contracts/MPROVesting.sol:MPROVesting", vesting.address, vesting.args);
+    await verifyContractWithRetry(`contracts/${VESTING_CONTRACT_NAME}.sol:${VESTING_CONTRACT_NAME}`, vesting.address, vesting.args);
 }
 
 module.exports.tags = ["MPROVesting"]

@@ -37,9 +37,11 @@ function accounts(chainKey: string) {
 
 const config: HardhatUserConfig = {
 	namedAccounts: {
+		// Account used for deployment
 		deployer: {
 			default: 3, // wallet address 0, of the mnemonic in .env
 		},
+		// Owner of the contract
 		owner: {
 			default: "0xfe015fEC2E10c29d2481fa22520C08c23805fb97", // Whoa
 			// default: "0x767e5C2359e7c809b16D8cFFdB9464F91b6c970B", // Chase
@@ -52,9 +54,6 @@ const config: HardhatUserConfig = {
 		},
 		helper: {
 			default: 1,
-		},
-		helper: {
-			default: 3, // wallet address 3, of the mnemonic in .env
 		},
 	},
 	gasReporter: {
