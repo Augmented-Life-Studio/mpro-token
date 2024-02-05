@@ -82,8 +82,99 @@ describe("MPROLight", function () {
 
   });
 
+  describe("burn() function", function () {
+    beforeEach(async function () {
+      let totalAmount = ethers.parseEther("100")
+      let nativeFee = (await mproToken.estimateSendFee(remoteChainId, deployerAddressBytes32, totalAmount, false, adapterParams))
 
-  it("Should sendFrom() tokens correctly", async function () {
+      await mproToken.connect(owner).sendFrom(
+        owner.address, // source address to send tokens from
+        remoteChainId, // destination chainId
+        deployerAddressBytes32, // destination address to send tokens to
+        totalAmount, // quantity of tokens to send (in units of wei)
+        { refundAddress: owner.address, zroPaymentAddress: ethers.ZeroAddress, adapterParams },
+        { value: nativeFee[0] } // pass a msg.value to pay the LayerZero message fee
+      )
+    })
+    it("Should burn tokens correctly", async function () {
+      const totalAmount = ethers.parseEther("100")
+      expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(totalAmount)
+      await mproTokenLight.connect(deployer).burn(deployer.address, totalAmount)
+      expect(await mproTokenLight.totalSupply()).to.equal(0)
+      expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(0)
+    });
+  })
+  describe("approve() function", function () {
+    it("Should approve tokens correctly", async function () {
+      const totalAmount = ethers.parseEther("100")
+      await mproTokenLight.connect(deployer).approve(addr1.address, totalAmount)
+      expect(await mproTokenLight.allowance(deployer.address, addr1.address)).to.equal(totalAmount)
+    });
+    it("Should revert when user is not allowed to approve", async function () {
+      // set addr1 to blocklist
+      await masterDistributor.connect(lister).blocklist(addr1.address, true)
+      const totalAmount = ethers.parseEther("100")
+      await expect(mproTokenLight.connect(addr1).approve(addr2.address, totalAmount)).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account")
+    })
+  })
+  describe("transfer() function", function () {
+    beforeEach(async function () {
+      let totalAmount = ethers.parseEther("100")
+      let nativeFee = (await mproToken.estimateSendFee(remoteChainId, deployerAddressBytes32, totalAmount, false, adapterParams))
+
+      await mproToken.connect(owner).sendFrom(
+        owner.address, // source address to send tokens from
+        remoteChainId, // destination chainId
+        deployerAddressBytes32, // destination address to send tokens to
+        totalAmount, // quantity of tokens to send (in units of wei)
+        { refundAddress: owner.address, zroPaymentAddress: ethers.ZeroAddress, adapterParams },
+        { value: nativeFee[0] } // pass a msg.value
+      )
+    })
+    it("Should transfer tokens correctly", async function () {
+      const totalAmount = ethers.parseEther("100")
+      await mproTokenLight.connect(deployer).transfer(addr1.address, totalAmount)
+      expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(0)
+      const burnRate = await masterDistributor.burnRate()
+      expect(await mproTokenLight.balanceOf(addr1.address)).to.equal((Number(totalAmount) - (Number(totalAmount) * Number(burnRate) / 10 ** 4)).toString())
+    });
+    it("Should revert when user is not allowed to transfer", async function () {
+      // set addr1 to blocklist
+      await masterDistributor.connect(lister).blocklist(addr1.address, true)
+      const totalAmount = ethers.parseEther("100")
+      await expect(mproTokenLight.connect(addr1).transfer(addr2.address, totalAmount)).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account")
+    })
+  })
+
+  describe("transferFrom() function", function () {
+    beforeEach(async function () {
+      let totalAmount = ethers.parseEther("100")
+      let nativeFee = (await mproToken.estimateSendFee(remoteChainId, deployerAddressBytes32, totalAmount, false, adapterParams))
+
+      await mproToken.connect(owner).sendFrom(
+        owner.address, // source address to send tokens from
+        remoteChainId, // destination chainId
+        deployerAddressBytes32, // destination address to send tokens to
+        totalAmount, // quantity of tokens to send (in units of wei)
+        { refundAddress: owner.address, zroPaymentAddress: ethers.ZeroAddress, adapterParams },
+        { value: nativeFee[0] } // pass a msg.value
+      )
+    })
+    it("Should transferFrom tokens correctly", async function () {
+      const totalAmount = ethers.parseEther("100")
+      await mproTokenLight.connect(deployer).transferFrom(deployer.address, addr1.address, totalAmount)
+      expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(0)
+      const burnRate = await masterDistributor.burnRate()
+      expect(await mproTokenLight.balanceOf(addr1.address)).to.equal((Number(totalAmount) - (Number(totalAmount) * Number(burnRate) / 10 ** 4)).toString())
+    });
+    it("Should revert when user is not allowed to transfer", async function () {
+      // set addr1 to blocklist
+      await masterDistributor.connect(lister).blocklist(addr1.address, true)
+      const totalAmount = ethers.parseEther("100")
+      await expect(mproTokenLight.connect(addr1).transferFrom(addr1.address, addr2.address, totalAmount)).to.be.revertedWith("MPROMasterDistributor: Action on blocklisted account")
+    })
+  })
+  it("sendFrom() function", async function () {
     let totalAmount = ethers.parseEther("8")
     let nativeFee = (await mproToken.estimateSendFee(remoteChainId, deployerAddressBytes32, totalAmount, false, adapterParams))
 
@@ -99,7 +190,7 @@ describe("MPROLight", function () {
     expect(await mproTokenLight.totalSupply()).to.equal(totalAmount)
     expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(totalAmount)
   });
-  it("Should properly get burnRate on transfer", async function () {
+  it("burnRate() on transfer", async function () {
     const totalAmount = ethers.parseEther("100")
     expect(await masterDistributor.burnRate()).to.equal(10 ** 3)
     let nativeFee = (await mproToken.estimateSendFee(remoteChainId, deployerAddressBytes32, totalAmount, false, adapterParams))

@@ -46,13 +46,13 @@ describe("MPRO", function () {
     });
   });
 
-  describe("Minting", function () {
+  describe("mint()", function () {
     it("Should fail to mint tokens when called by non-distributor", async function () {
       await expect(mproToken.connect(addr1).mint(addr2.address, ethers.parseEther("50"))).to.be.revertedWith("MPROMasterDistributor: Distributor only");
     });
   });
 
-  describe("Burning", function () {
+  describe("burn()", function () {
     it("Should burn tokens correctly", async function () {
       await mproToken.connect(owner).burn(owner.address, ethers.parseEther("10"));
       expect(await mproToken.balanceOf(owner.address)).to.equal(ethers.parseEther("90"));
@@ -60,7 +60,7 @@ describe("MPRO", function () {
     });
   });
 
-  describe("Transferring", function () {
+  describe("transfer() and transferFrom()", function () {
     it("Should transfer tokens correctly", async function () {
       await mproToken.connect(owner).transfer(addr1.address, ethers.parseEther("10"));
       expect(await mproToken.balanceOf(addr1.address)).to.equal(ethers.parseEther("9"));

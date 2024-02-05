@@ -173,7 +173,7 @@ contract MPROVesting is Context, Ownable {
                 _beneficiaries[i]
             ];
             if (beneficiary.amount > 0) {
-                if (beneficiary.claimed > beneficiary.amount) {
+                if (beneficiary.claimed > _amounts[i]) {
                     beneficiary.amount = beneficiary.claimed;
                 } else {
                     beneficiary.amount = _amounts[i];
@@ -239,9 +239,6 @@ contract MPROVesting is Context, Ownable {
         VestingBeneficiary memory beneficiary = vestingBeneficiaries[
             _beneficiary
         ];
-        if (block.timestamp < tgeUnlockTimestamp) {
-            return 0;
-        }
         uint256 totalTokens = beneficiary.amount;
         uint256 claimableTgaTokens = totalTokens.mul(tgeUnlockPercent).div(
             UNLOCK_PERCENT_DIVIDER

@@ -54,7 +54,7 @@ describe("MPROVesting", function () {
         expect(await erc20.balanceOf(mproVesting.target)).to.equal(ethers.parseUnits("100000"));
     });
 
-    describe("Deployment", function () {
+    describe("constructor()", function () {
         it("Should properly deploy and set initial values", async function () {
             expect(await mproVesting.token()).to.equal(erc20.target);
             expect(await mproVesting.tgeUnlockTimestamp()).to.equal(TGE_UNLOCK_TIMESTAMP);
@@ -65,7 +65,20 @@ describe("MPROVesting", function () {
         });
     });
 
-    describe("registerBeneficiaries function", function () {
+    describe("setTgeUnlockTimestamp() function", function () {
+        it("Should properly set TGE unlock timestamp", async function () {
+            await mproVesting.connect(deployer).setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP + 100);
+            expect(await mproVesting.tgeUnlockTimestamp()).to.equal(TGE_UNLOCK_TIMESTAMP + 100);
+        })
+        it("Should return error when called by non-owner", async function () {
+            await expect(mproVesting.connect(ben1).setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP + 100)).to.be.revertedWith("Ownable: caller is not the owner");
+        })
+        it("Should emit SetTgeUnlockTimestamp event", async function () {
+            await expect(mproVesting.connect(deployer).setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP + 100)).to.emit(mproVesting, "SetTgeUnlockTimestamp").withArgs(TGE_UNLOCK_TIMESTAMP + 100);
+        })
+    })
+
+    describe("registerBeneficiaries() function", function () {
         it("Should properly register beneficiaries", async function () {
             await mproVesting.connect(deployer).registerBeneficiaries([ben1.address, ben2.address, ben3.address, ben4.address], [1000, 2000, 3000, 4000]);
             expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
@@ -90,14 +103,38 @@ describe("MPROVesting", function () {
         it("Should return error when one of beneficiaries is zero address", async function () {
             await expect(mproVesting.connect(deployer).registerBeneficiaries([ben1.address, ethers.ZeroAddress], [1000, 1000])).to.be.revertedWith("Vesting: Invalid beneficiary");
         })
+        it("Should set to claimed balance when beneficiary is updated to lower than claimed balance", async function () {
+            await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [1000]);
+            await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+            await mine();
+            await mproVesting.connect(ben1).claim();
+            const claimed = await mproVesting.connect(ben1).claimed();
+            const amountToUpdate = 50;
+            expect(claimed).to.be.greaterThan(amountToUpdate);
+            await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [amountToUpdate]);
+            expect(await mproVesting.connect(ben1).claimed()).to.equal(claimed);
+        })
     })
-    describe("claimBalance function", function () {
+    describe("claimBalance() function", function () {
         it("Should return proper value when called by beneficiary", async function () {
             await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [1000]);
             expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
         })
     })
-    describe("enableForRelease function", function () {
+    describe("claimed() function", function () {
+        it("Should return proper value when called by beneficiary", async function () {
+            await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [1000]);
+            expect(await mproVesting.connect(ben1).claimed()).to.equal(0);
+        })
+        it("Should return proper value when called by beneficiary after claim", async function () {
+            await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [1000]);
+            await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+            await mine();
+            await mproVesting.connect(ben1).claim();
+            expect(await mproVesting.connect(ben1).claimed()).to.equal(getTgeUnlockAmount(1000));
+        })
+    })
+    describe("enableForRelease() function", function () {
         const userAmount = 1000;
 
         beforeEach(async function () {
@@ -110,6 +147,11 @@ describe("MPROVesting", function () {
             await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
             await mine();
             expect(Number((await mproVesting.enableForRelease(ben1.address)).toString())).to.equal(userAmount * TGE_UNLOCK_PERCENT / UNLOCK_PERCENT_DIVIDER);
+        })
+        it("Should return 0 when caller is not register and TGE_UNLOCK_TIMESTAMP is reached", async function () {
+            await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+            await mine();
+            expect(Number((await mproVesting.enableForRelease(ben2.address)).toString())).to.equal(0);
         })
         it(`Should return proper amount when CLIFF_TIMESTAMP is reached`, async function () {
             await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY + CLIFF_DELAY]);
@@ -131,7 +173,7 @@ describe("MPROVesting", function () {
             }
         })
     })
-    describe("claim function", function () {
+    describe("claim() function", function () {
         const userAmount = 1000;
         beforeEach(async function () {
             await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [userAmount]);
