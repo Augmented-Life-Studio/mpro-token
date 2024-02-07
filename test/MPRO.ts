@@ -13,7 +13,7 @@ describe("JAKANTToken", function () {
   beforeEach(async function () {
     [deployer, owner, lister, addr1, addr2, addr3] = await ethers.getSigners();
 
-    const MasterDistributorFactory = await ethers.getContractFactory("contracts/JAKANTMasterDistributor.sol:JAKANTMasterDistributor") as JAKANTMasterDistributor__factory;
+    const MasterDistributorFactory = await ethers.getContractFactory("contracts/MPROMasterDistributorLight.sol:JAKANTMasterDistributor") as JAKANTMasterDistributor__factory;
     masterDistributor = await MasterDistributorFactory.deploy(owner.address);
     const masterDistributorAddress = await masterDistributor.getAddress();
 

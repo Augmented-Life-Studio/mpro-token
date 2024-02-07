@@ -4,13 +4,13 @@ import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { mine } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { JAKANTMasterDistributor__factory } from '../typechain-types/factories/contracts/MPROMasterDistributorLight.sol';
 import { JAKANTMasterDistributor } from '../typechain-types/contracts/MPROMasterDistributorLight.sol';
-import { MPRO } from '../typechain-types/contracts/MPROLight.sol';
-import { MPRO__factory } from '../typechain-types/factories/contracts/MPROLight.sol';
+import { JAKANTToken } from '../typechain-types/contracts/MPROLight.sol';
+import { JAKANTToken__factory } from '../typechain-types/factories/contracts/MPROLight.sol';
 
-// npx hardhat test test/JAKANTMasterDistributorLight.ts
+// npx hardhat test test/MPROMasterDistributorLight.ts
 
 describe('JAKANTMasterDistributorLight', () => {
-  let mproToken: MPRO;
+  let mproToken: JAKANTToken;
   let mproMasterDistributor: JAKANTMasterDistributor;
   let deployer: HardhatEthersSigner, owner: HardhatEthersSigner, lister: HardhatEthersSigner, vesting: HardhatEthersSigner, distributor: HardhatEthersSigner, addrs: HardhatEthersSigner[];
   beforeEach(async () => {
@@ -24,12 +24,12 @@ describe('JAKANTMasterDistributorLight', () => {
     ] = await ethers.getSigners()
 
 
-    const MasterDistributorFactory = await ethers.getContractFactory("contracts/JAKANTMasterDistributorLight.sol:JAKANTMasterDistributor") as JAKANTMasterDistributor__factory;
+    const MasterDistributorFactory = await ethers.getContractFactory("contracts/MPROMasterDistributorLight.sol:JAKANTMasterDistributor") as JAKANTMasterDistributor__factory;
     mproMasterDistributor = await MasterDistributorFactory.deploy(owner.address);
 
     await mproMasterDistributor.connect(owner).grantRole(await mproMasterDistributor.LISTER_ROLE(), lister.address);
 
-    const MPRO = await ethers.getContractFactory('contracts/MPROLight.sol:MPRO') as MPRO__factory;
+    const MPRO = await ethers.getContractFactory('contracts/MPROLight.sol:JAKANTToken') as JAKANTToken__factory;
     mproToken = await MPRO.deploy(
       'MPRO', 'MPRO', '0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1', mproMasterDistributor.target, owner.address
     );

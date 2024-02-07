@@ -59,9 +59,9 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
         keccak256("DISTRIBUTIONS_ADMINISTRATOR_ROLE_MANAGER");
     bytes32 public constant LISTER_ROLE = keccak256("LISTER_ROLE");
 
-    IJAKANTToken private mproToken;
+    IJAKANTToken public mproToken;
 
-    mapping(bytes32 => bool) private assignedRoles;
+    mapping(bytes32 => bool) public assignedRoles;
 
     /**
      * @dev Internal mapping to manage blocklisted addresses.
@@ -94,7 +94,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
     /**
      * @dev Timestamp indicating when token distribution starts.
      *
-     * This private state variable stores the Unix timestamp (in seconds) that marks the beginning
+     * This public state variable stores the Unix timestamp (in seconds) that marks the beginning
      * of the token distribution period. The value is set during the contract initialization and
      * can be updated by specific functions within the contract, depending on the contract's logic.
      *
@@ -102,13 +102,13 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      * distribution period has begun. This allows for conditional logic based on the time, such as
      * enabling token distributions only after this timestamp is reached.
      *
-     * Being a private variable, it can only be accessed and modified by functions within this
+     * Being a public variable, it can only be accessed and modified by functions within this
      * contract, providing a controlled and secure way to manage the start of the distribution phase.
      */
     uint256 public distributionStartTimestamp;
 
     /**
-     * @dev Private immutable variable representing the deadline for the distribution start timestamp.
+     * @dev public immutable variable representing the deadline for the distribution start timestamp.
      *
      * This variable is used to store an immutable timestamp that defines the deadline for the
      * distribution start timestamp within the contract. It is typically set during contract
@@ -118,10 +118,10 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      * starting the distribution of tokens. After this deadline, distribution start timestamps
      * beyond this value will not be accepted.
      */
-    uint256 private immutable distributionStartTimestampDeadLine;
+    uint256 public immutable distributionStartTimestampDeadLine;
 
     /**
-     * @dev Private variable to keep track of the total tokens distributed.
+     * @dev public variable to keep track of the total tokens distributed.
      *
      * This variable is used to maintain a count of the total tokens that have been distributed
      * within the contract. It starts at zero and is updated whenever tokens are distributed to
@@ -133,7 +133,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
     uint256 public distributedTokens = 0;
 
     /**
-     * @dev Private constant representing the initial daily distribution of tokens.
+     * @dev public constant representing the initial daily distribution of tokens.
      *
      * This constant defines the initial daily distribution of tokens within the contract. It
      * represents a fixed amount of tokens that are distributed daily as part of a distribution
@@ -417,13 +417,13 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      * token balance that is available for distribution, ensuring that the distribution does not exceed
      * the planned amount at any given point.
      *
-     * Note that this is a private function and can only be called within the contract itself. This function
+     * Note that this is a public function and can only be called within the contract itself. This function
      * is typically used internally to manage and track the distribution process accurately.
      *
      * @return The quantity of tokens that are currently available for distribution.
      */
     function getAvailableForDistributionTokenQuantity()
-        private
+        public
         view
         returns (uint256)
     {
@@ -1021,7 +1021,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      * @return `true` if the account is whitelisted, `false` otherwise.
      */
 
-    function isWhitelisted(address _account) private view returns (bool) {
+    function isWhitelisted(address _account) public view returns (bool) {
         if (_account == address(0)) {
             return true;
         }

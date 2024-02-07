@@ -32,7 +32,7 @@ describe('JAKANTMasterDistributor', () => {
     ] = await ethers.getSigners()
 
 
-    const MasterDistributorFactory = await ethers.getContractFactory("contracts/JAKANTMasterDistributor.sol:JAKANTMasterDistributor") as JAKANTMasterDistributor__factory;
+    const MasterDistributorFactory = await ethers.getContractFactory("contracts/MPROMasterDistributor.sol:JAKANTMasterDistributor") as JAKANTMasterDistributor__factory;
     mproMasterDistributor = await MasterDistributorFactory.deploy(owner.address);
 
     const mproMasterDistributorDeploymentBlockNumber = mproMasterDistributor.deploymentTransaction()?.blockNumber as number;

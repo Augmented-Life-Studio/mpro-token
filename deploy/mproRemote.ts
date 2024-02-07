@@ -6,6 +6,7 @@ import { verifyContractWithRetry } from "../utils/verifyContract";
 import { JAKANTMasterDistributor } from "../typechain-types";
 
 // npx hardhat deploy --tags JAKANTRemote --network mumbai
+// npx hardhat deploy --tags JAKANTRemote --network bsc-testnet
 
 module.exports = async function ({ deployments, getNamedAccounts }: {
     deployments: DeploymentsExtension, getNamedAccounts: any
@@ -46,7 +47,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
         contract: "contracts/MPROLight.sol:JAKANTToken",
     })
 
-    console.log("MPJAKANTTokenRO deployed to:", mproToken);
+    console.log("MPJAKANTTokenRO deployed to:", mproToken.address);
 
     await verifyContractWithRetry("contracts/MPROLight.sol:JAKANTToken", mproToken.address, mproToken.args);
 }

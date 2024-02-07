@@ -23,6 +23,7 @@ IMPORTANT: helper needs to be the owner of the token contracts, so that it can s
 
 ```shell
 npx hardhat --network goerli deploy --tags JAKANTSource
+npx hardhat --network mumbai deploy --tags JAKANTRemote
 npx hardhat --network bsc-testnet deploy --tags JAKANTRemote
 ```
 

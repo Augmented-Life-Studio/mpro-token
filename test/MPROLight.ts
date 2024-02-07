@@ -2,9 +2,9 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { JAKANTMasterDistributor__factory, LZEndpointMock } from "../typechain-types";
-import { MPRO as JAKANTLight } from "../typechain-types/contracts/MPROLight.sol";
+import { JAKANTToken as JAKANTLight } from "../typechain-types/contracts/MPROLight.sol";
 import { JAKANTToken } from "../typechain-types/contracts/MPRO.sol";
-import { MPRO__factory as JAKANTLight__factory } from "../typechain-types/factories/contracts/MPROLight.sol";
+import { JAKANTToken__factory as JAKANTLight__factory } from "../typechain-types/factories/contracts/MPROLight.sol";
 import { JAKANTToken__factory } from "../typechain-types/factories/contracts/MPRO.sol";
 import { BytesLike } from "ethers";
 import { JAKANTMasterDistributor } from "../typechain-types/contracts/MPROMasterDistributor.sol";
@@ -27,7 +27,7 @@ describe("JAKANTLight", function () {
   beforeEach(async function () {
     [deployer, owner, lister, addr1, addr2, addr3] = await ethers.getSigners();
 
-    const MasterDistributorFactory = await ethers.getContractFactory("contracts/MPROMasterDistributorLight.sol:MPROMasterDistributor") as JAKANTMasterDistributor__factory;
+    const MasterDistributorFactory = await ethers.getContractFactory("contracts/MPROMasterDistributorLight.sol:JAKANTMasterDistributor") as JAKANTMasterDistributor__factory;
     masterDistributor = await MasterDistributorFactory.deploy(owner.address);
     const masterDistributorAddress = await masterDistributor.getAddress();
 
@@ -38,7 +38,7 @@ describe("JAKANTLight", function () {
 
     await masterDistributor.connect(owner).grantRole(await masterDistributor.LISTER_ROLE(), lister.address);
 
-    const MPROFactory: JAKANTToken__factory = await ethers.getContractFactory("contracts/MPRO.sol:MPRO") as JAKANTToken__factory;
+    const MPROFactory: JAKANTToken__factory = await ethers.getContractFactory("contracts/MPRO.sol:JAKANTToken") as JAKANTToken__factory;
     mproToken = await MPROFactory.deploy(
       "MPRO",
       "MPRO",

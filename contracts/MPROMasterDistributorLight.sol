@@ -22,7 +22,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
 
     bytes32 public constant LISTER_ROLE = keccak256("LISTER_ROLE");
 
-    mapping(bytes32 => bool) private assignedRoles;
+    mapping(bytes32 => bool) public assignedRoles;
 
     /**
      * @dev Internal mapping to manage blocklisted addresses.
@@ -490,7 +490,7 @@ contract JAKANTMasterDistributor is Context, AccessControl, Ownable {
      * @return `true` if the account is whitelisted, `false` otherwise.
      */
 
-    function isWhitelisted(address _account) private view returns (bool) {
+    function isWhitelisted(address _account) public view returns (bool) {
         if (_account == address(0)) {
             return true;
         }

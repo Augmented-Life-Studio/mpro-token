@@ -43,14 +43,20 @@ const config: HardhatUserConfig = {
 		},
 		// Owner of the contract
 		owner: {
-			default: "0xfe015fEC2E10c29d2481fa22520C08c23805fb97", // Whoa
-			// default: "0x767e5C2359e7c809b16D8cFFdB9464F91b6c970B", // Chase
+			// default: "0xfe015fEC2E10c29d2481fa22520C08c23805fb97", // Whoa
+			default: "0x767e5C2359e7c809b16D8cFFdB9464F91b6c970B", // Chase
 		},
 		vesting1: {
 			default: "0xfe015fEC2E10c29d2481fa22520C08c23805fb97", // Whoa
 		},
 		vesting2: {
 			default: "0x767e5C2359e7c809b16D8cFFdB9464F91b6c970B", // Chase
+		},
+		vesting3: {
+			default: "0xE561e33D8d54c4fa9250B8E096a5De3e5CD28FB8", // David
+		},
+		vesting4: {
+			default: "0x8B7C5D0F05Dc6A5Af60292A6061aE960b8a47274", // Jakant
 		},
 		helper: {
 			default: 1,
