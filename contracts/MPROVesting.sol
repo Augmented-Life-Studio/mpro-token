@@ -214,7 +214,7 @@ contract MPROVesting is Context, Ownable {
      *
      * @return The amount of tokens already claimed by the caller.
      */
-    function claimed()
+    function claimedAllocation()
         public
         view
         virtual
@@ -230,14 +230,11 @@ contract MPROVesting is Context, Ownable {
      * the claimable amount. It returns zero if the current time is before the TGE unlock timestamp, and calculates
      * the tokens available based on the vesting schedule otherwise.
      *
-     * @param _beneficiary The address of the beneficiary whose claimable amount is to be calculated.
      * @return The amount of tokens the beneficiary is currently eligible to claim.
      */
-    function enableForRelease(
-        address _beneficiary
-    ) public view returns (uint256) {
+    function enableForRelease() public view onlyBeneficiary(_msgSender()) returns (uint256) {
         VestingBeneficiary memory beneficiary = vestingBeneficiaries[
-            _beneficiary
+            _msgSender()
         ];
         uint256 totalTokens = beneficiary.amount;
         uint256 claimableTgaTokens = totalTokens.mul(tgeUnlockPercent).div(
@@ -247,7 +244,7 @@ contract MPROVesting is Context, Ownable {
             block.timestamp >= tgeUnlockTimestamp &&
             block.timestamp < cliffTimestamp
         ) {
-            return claimableTgaTokens - beneficiary.claimed;
+            return claimableTgaTokens.sub(beneficiary.claimed);
         } else if (block.timestamp >= cliffTimestamp) {
             uint256 vestingCircles = block.timestamp.sub(cliffTimestamp).div(
                 vestingPeriodDuration
@@ -269,6 +266,55 @@ contract MPROVesting is Context, Ownable {
         }
     }
 
+    function nextReleaseTimestamp() public view returns (uint256) {
+        if (
+            block.timestamp < tgeUnlockTimestamp
+        ) {
+            return tgeUnlockTimestamp;
+        } else if (block.timestamp < cliffTimestamp) {
+            return cliffTimestamp;
+        } else {
+            uint256 vestingCircle = 1;
+            vestingCircle += block.timestamp.sub(cliffTimestamp).div(
+                vestingPeriodDuration
+            );
+            return cliffTimestamp.add(
+                vestingCircle.mul(vestingPeriodDuration)
+            );
+        }
+    }
+
+    function nextReleaseAllocation() public view onlyBeneficiary(_msgSender()) returns (uint256) {
+        VestingBeneficiary memory beneficiary = vestingBeneficiaries[
+            _msgSender()
+        ];
+        uint256 totalTokens = beneficiary.amount;
+        uint256 claimableTgaTokens = totalTokens.mul(tgeUnlockPercent).div(
+            UNLOCK_PERCENT_DIVIDER
+        );
+        if (
+            block.timestamp < tgeUnlockTimestamp
+        ) {
+            return claimableTgaTokens;
+        } else {
+            uint256 vestingCircle = 1;
+            if (block.timestamp > cliffTimestamp)
+                vestingCircle += block.timestamp.sub(cliffTimestamp).div(
+                    vestingPeriodDuration
+                );
+
+            uint256 vestingTokens = totalTokens.mul(vestingUnlockPercentPerPeriod).div(
+                UNLOCK_PERCENT_DIVIDER
+            );
+
+            if (vestingCircle.mul(vestingTokens) >= totalTokens - claimableTgaTokens) {
+                return 0;
+            }
+
+            return vestingTokens;
+        }
+    }
+
     /**
      * @dev Allows a beneficiary to claim their vested tokens. This function checks if the current time is past
      * the TGE unlock timestamp and if there are tokens available for release. Updates the claimed amount in the
@@ -280,7 +326,7 @@ contract MPROVesting is Context, Ownable {
             block.timestamp >= tgeUnlockTimestamp,
             "Vesting: Not yet unlocked"
         );
-        uint256 tokensEnableForRelease = enableForRelease(_msgSender());
+        uint256 tokensEnableForRelease = enableForRelease();
         require(tokensEnableForRelease > 0, "Vesting: No tokens to release");
 
         vestingBeneficiaries[_msgSender()].claimed += tokensEnableForRelease;

@@ -15,6 +15,7 @@ describe("MPROVesting", function () {
     let TGE_UNLOCK_DELAY: number
     let TGE_UNLOCK_TIMESTAMP: number
     let CLIFF_DELAY: number
+    let VESTING_PERIOD_DURATION: number
     const TGE_UNLOCK_PERCENT: number = 1000
     const VESTING_UNLOCK_PERCENT = 1000
     const UNLOCK_PERCENT_DIVIDER = 10000
@@ -38,6 +39,7 @@ describe("MPROVesting", function () {
         TGE_UNLOCK_DELAY = ONE_DAY
         TGE_UNLOCK_TIMESTAMP = currentTimestamp + ONE_DAY;
         CLIFF_DELAY = ONE_DAY * 30;
+        VESTING_PERIOD_DURATION = ONE_DAY;
 
         const MPROVestingFactory: MPROVesting__factory = await ethers.getContractFactory("MPROVesting");
         mproVesting = await MPROVestingFactory.deploy(
@@ -46,7 +48,7 @@ describe("MPROVesting", function () {
             TGE_UNLOCK_PERCENT,
             CLIFF_DELAY,
             VESTING_UNLOCK_PERCENT,
-            ONE_DAY,
+            VESTING_PERIOD_DURATION,
             deployer.address
         );
 
@@ -108,11 +110,11 @@ describe("MPROVesting", function () {
             await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
             await mine();
             await mproVesting.connect(ben1).claim();
-            const claimed = await mproVesting.connect(ben1).claimed();
+            const claimed = await mproVesting.connect(ben1).claimedAllocation();
             const amountToUpdate = 50;
             expect(claimed).to.be.greaterThan(amountToUpdate);
             await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [amountToUpdate]);
-            expect(await mproVesting.connect(ben1).claimed()).to.equal(claimed);
+            expect(await mproVesting.connect(ben1).claimedAllocation()).to.equal(claimed);
         })
     })
     describe("claimBalance() function", function () {
@@ -121,17 +123,17 @@ describe("MPROVesting", function () {
             expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
         })
     })
-    describe("claimed() function", function () {
+    describe("claimedAllocation() function", function () {
         it("Should return proper value when called by beneficiary", async function () {
             await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [1000]);
-            expect(await mproVesting.connect(ben1).claimed()).to.equal(0);
+            expect(await mproVesting.connect(ben1).claimedAllocation()).to.equal(0);
         })
         it("Should return proper value when called by beneficiary after claim", async function () {
             await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [1000]);
             await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
             await mine();
             await mproVesting.connect(ben1).claim();
-            expect(await mproVesting.connect(ben1).claimed()).to.equal(getTgeUnlockAmount(1000));
+            expect(await mproVesting.connect(ben1).claimedAllocation()).to.equal(getTgeUnlockAmount(1000));
         })
     })
     describe("enableForRelease() function", function () {
@@ -141,22 +143,20 @@ describe("MPROVesting", function () {
             await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [userAmount]);
         })
         it(`Should return proper amount when TGE_UNLOCK_TIMESTAMP is not reached`, async function () {
-            expect(await mproVesting.enableForRelease(ben1.address)).to.equal(0);
+            expect(await mproVesting.connect(ben1).enableForRelease()).to.equal(0);
         })
         it(`Should return proper amount when TGE_UNLOCK_TIMESTAMP is reached`, async function () {
             await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
             await mine();
-            expect(Number((await mproVesting.enableForRelease(ben1.address)).toString())).to.equal(userAmount * TGE_UNLOCK_PERCENT / UNLOCK_PERCENT_DIVIDER);
+            expect(Number((await mproVesting.connect(ben1).enableForRelease()).toString())).to.equal(userAmount * TGE_UNLOCK_PERCENT / UNLOCK_PERCENT_DIVIDER);
         })
-        it("Should return 0 when caller is not register and TGE_UNLOCK_TIMESTAMP is reached", async function () {
-            await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
-            await mine();
-            expect(Number((await mproVesting.enableForRelease(ben2.address)).toString())).to.equal(0);
+        it("Should return error when account is not beneficiary", async function () {
+            await expect(mproVesting.connect(ben2).enableForRelease()).to.be.revertedWith("MPROVesting: Account is not a beneficiary");;
         })
         it(`Should return proper amount when CLIFF_TIMESTAMP is reached`, async function () {
             await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY + CLIFF_DELAY]);
             await mine();
-            expect(Number((await mproVesting.enableForRelease(ben1.address)).toString())).to.equal(getTgeUnlockAmount(userAmount) + getVestingUnlockAmount(userAmount, 1));
+            expect(Number((await mproVesting.connect(ben1).enableForRelease()).toString())).to.equal(getTgeUnlockAmount(userAmount) + getVestingUnlockAmount(userAmount, 1));
         })
         it("Should return proper amounts on every vesting period", async function () {
             const periodsArray = new Array(20).fill(0).map((_, i) => i + 1);
@@ -167,7 +167,7 @@ describe("MPROVesting", function () {
                 if (expectedAmount > userAmount) {
                     expectedAmount = userAmount;
                 }
-                expect(Number((await mproVesting.enableForRelease(ben1.address)).toString())).to.equal(expectedAmount);
+                expect(Number((await mproVesting.connect(ben1).enableForRelease()).toString())).to.equal(expectedAmount);
                 await network.provider.send("evm_increaseTime", [ONE_DAY]);
                 await mine();
             }
@@ -213,6 +213,51 @@ describe("MPROVesting", function () {
 
                 }
                 await network.provider.send("evm_increaseTime", [ONE_DAY]);
+                await mine();
+            }
+        })
+    })
+    // npx hardhat test test/MPROVesting.ts --grep "nextReleaseTimestamp function"
+    describe("nextReleaseTimestamp function", function () {
+        const userAmount = 1000;
+        beforeEach(async function () {
+            await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [userAmount]);
+        })
+        it("Should return proper value when called by beneficiary", async function () {
+            await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+            await mine();
+            expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY);
+            await network.provider.send("evm_increaseTime", [CLIFF_DELAY]);
+            await mine();
+            expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY + VESTING_PERIOD_DURATION);
+            await network.provider.send("evm_increaseTime", [VESTING_PERIOD_DURATION]);
+            await mine();
+            expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY + VESTING_PERIOD_DURATION * 2);
+        })
+    })
+    // npx hardhat test test/MPROVesting.ts --grep "nextReleaseAllocation function"
+    describe("nextReleaseAllocation function", function () {
+        const userAmount = 1000;
+        beforeEach(async function () {
+            await mproVesting.connect(deployer).registerBeneficiaries([ben1.address], [userAmount]);
+        })
+        it("Should return proper value when called by beneficiary", async function () {
+            expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(getTgeUnlockAmount(userAmount));
+            await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+            await mine();
+            expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(getVestingUnlockAmount(userAmount, 1));
+            await network.provider.send("evm_increaseTime", [CLIFF_DELAY]);
+            await mine();
+            expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(getVestingUnlockAmount(userAmount, 1));
+            const periodsArray = new Array(12).fill(0).map((_, i) => i + 1);
+            for (const period of periodsArray) {
+                let expectedAmount = getTgeUnlockAmount(userAmount) + getVestingUnlockAmount(userAmount, (period + 1));
+                if (expectedAmount > userAmount) {
+                    expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(0);
+                } else {
+                    expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(getVestingUnlockAmount(userAmount, 1));
+                }
+                await network.provider.send("evm_increaseTime", [VESTING_PERIOD_DURATION]);
                 await mine();
             }
         })
