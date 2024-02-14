@@ -89,6 +89,7 @@ contract JAKANTToken is OFTV2, ERC20Votes {
         address _owner
     ) OFTV2(_name, _symbol, 6, _lzEndpoint) ERC20Permit(_name) {
         for (uint256 i = 0; i < premintAddresses.length; i++) {
+            _totalSupply += premintValues[i];
             super._mint(premintAddresses[i], premintValues[i]);
         }
         mproMasterDistributor = IJAKANTMasterDistributor(
@@ -146,7 +147,7 @@ contract JAKANTToken is OFTV2, ERC20Votes {
      */
     function mint(address account, uint256 amount) external virtual {
         mproMasterDistributor.mintAllowed(_msgSender());
-        _totalSupply = _totalSupply.add(amount);
+        _totalSupply += amount;
         _mint(account, amount);
     }
 
@@ -369,7 +370,7 @@ contract JAKANTToken is OFTV2, ERC20Votes {
     ) internal override(ERC20) {
         if (from == address(0)) {
             require(
-                _totalSupply + amount <= _maxCap,
+                _totalSupply <= _maxCap,
                 "ERC20Capped: cap exceeded"
             );
         }

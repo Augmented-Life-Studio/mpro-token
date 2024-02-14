@@ -139,5 +139,27 @@ describe("JAKANTLight", function () {
       { value: nativeFee[0] } // pass a msg.value to pay the LayerZero message fee
     )
   })
+  it("sendFrom() local and sendFrom() remote", async function () {
+    const totalAmount = ethers.parseEther("100")
+    expect(await masterDistributor.burnRate()).to.equal(10 ** 3)
+    let nativeFee = (await mproToken.estimateSendFee(remoteChainId, deployerAddressBytes32, totalAmount, false, adapterParams))
+    await mproToken.connect(owner).sendFrom(
+      owner.address, // source address to send tokens from
+      remoteChainId, // destination chainId
+      deployerAddressBytes32, // destination address to send tokens to
+      totalAmount, // quantity of tokens to send (in units of wei)
+      { refundAddress: owner.address, zroPaymentAddress: ethers.ZeroAddress, adapterParams },
+      { value: nativeFee[0] } // pass a msg.value to pay the LayerZero message fee
+    )
+
+    await mproTokenLight.connect(deployer).sendFrom(
+      deployer.address, // source address to send tokens from
+      localChainId, // destination chainId
+      deployerAddressBytes32, // destination address to send tokens to
+      totalAmount, // quantity of tokens to send (in units of wei)
+      { refundAddress: owner.address, zroPaymentAddress: ethers.ZeroAddress, adapterParams },
+      { value: nativeFee[0] } // pass a msg.value to pay the LayerZero message fee
+    )
+  })
 
 });
