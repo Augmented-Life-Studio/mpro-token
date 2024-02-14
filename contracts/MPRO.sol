@@ -146,6 +146,7 @@ contract JAKANTToken is OFTV2, ERC20Votes {
      */
     function mint(address account, uint256 amount) external virtual {
         mproMasterDistributor.mintAllowed(_msgSender());
+        _totalSupply = _totalSupply.add(amount);
         _mint(account, amount);
     }
 
@@ -402,9 +403,6 @@ contract JAKANTToken is OFTV2, ERC20Votes {
         address to,
         uint256 amount
     ) internal override(ERC20, ERC20Votes) {
-        if (from == address(0)) {
-            _totalSupply = _totalSupply.add(amount);
-        }
         super._afterTokenTransfer(from, to, amount);
     }
 
