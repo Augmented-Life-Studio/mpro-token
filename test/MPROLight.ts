@@ -42,7 +42,7 @@ describe("MPROLight", function () {
       "MPRO",
       "MPRO",
       [owner.address, deployer.address], // Premint addresses
-      [ethers.parseEther("100"), ethers.parseEther("100")], // Premint values
+      [ethers.parseEther("100"), ethers.parseEther("499999900")], // Premint values
       localEndpoint.target, // LayerZero Endpoint
       masterDistributorAddress,
       deployer.address
@@ -75,7 +75,7 @@ describe("MPROLight", function () {
     await mproTokenLight.setTrustedRemote(localChainId, localPath)
 
     await mproToken.setMinDstGas(remoteChainId, 0, 100000)
-    await mproTokenLight.setMinDstGas(localChainId, 1, 100000)
+    await mproTokenLight.setMinDstGas(localChainId, 0, 100000)
 
     const abiCoder = ethers.AbiCoder.defaultAbiCoder()
     deployerAddressBytes32 = abiCoder.encode(["address"], [deployer.address])
@@ -205,6 +205,28 @@ describe("MPROLight", function () {
     expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(ethers.parseEther("100"))
     await mproTokenLight.connect(deployer).transfer(addr1.address, ethers.parseEther("100"))
     expect(await mproTokenLight.balanceOf(addr1.address)).to.equal(ethers.parseEther("90"))
+  })
+  it("sendFrom() local and sendFrom() remote", async function () {
+    const totalAmount = ethers.parseEther("100")
+    expect(await masterDistributor.burnRate()).to.equal(10 ** 3)
+    let nativeFee = (await mproToken.estimateSendFee(remoteChainId, deployerAddressBytes32, totalAmount, false, adapterParams))
+    await mproToken.connect(owner).sendFrom(
+      owner.address, // source address to send tokens from
+      remoteChainId, // destination chainId
+      deployerAddressBytes32, // destination address to send tokens to
+      totalAmount, // quantity of tokens to send (in units of wei)
+      { refundAddress: owner.address, zroPaymentAddress: ethers.ZeroAddress, adapterParams },
+      { value: nativeFee[0] } // pass a msg.value to pay the LayerZero message fee
+    )
+
+    await mproTokenLight.connect(deployer).sendFrom(
+      deployer.address, // source address to send tokens from
+      localChainId, // destination chainId
+      deployerAddressBytes32, // destination address to send tokens to
+      totalAmount, // quantity of tokens to send (in units of wei)
+      { refundAddress: owner.address, zroPaymentAddress: ethers.ZeroAddress, adapterParams },
+      { value: nativeFee[0] } // pass a msg.value to pay the LayerZero message fee
+    )
   })
 
 });

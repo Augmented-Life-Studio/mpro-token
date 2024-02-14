@@ -89,6 +89,7 @@ contract MPRO is OFTV2, ERC20Votes {
         address _owner
     ) OFTV2(_name, _symbol, 6, _lzEndpoint) ERC20Permit(_name) {
         for (uint256 i = 0; i < premintAddresses.length; i++) {
+            _totalSupply += premintValues[i];
             super._mint(premintAddresses[i], premintValues[i]);
         }
         mproMasterDistributor = IMPROMasterDistributor(_mproMasterDistributor);
@@ -144,6 +145,7 @@ contract MPRO is OFTV2, ERC20Votes {
      */
     function mint(address account, uint256 amount) external virtual {
         mproMasterDistributor.mintAllowed(_msgSender());
+        _totalSupply += amount;
         _mint(account, amount);
     }
 
@@ -366,7 +368,7 @@ contract MPRO is OFTV2, ERC20Votes {
     ) internal override(ERC20) {
         if (from == address(0)) {
             require(
-                _totalSupply + amount <= _maxCap,
+                _totalSupply <= _maxCap,
                 "ERC20Capped: cap exceeded"
             );
         }
@@ -400,9 +402,6 @@ contract MPRO is OFTV2, ERC20Votes {
         address to,
         uint256 amount
     ) internal override(ERC20, ERC20Votes) {
-        if (from == address(0)) {
-            _totalSupply = _totalSupply.add(amount);
-        }
         super._afterTokenTransfer(from, to, amount);
     }
 
