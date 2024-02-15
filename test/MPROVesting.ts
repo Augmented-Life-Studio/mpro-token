@@ -25,6 +25,7 @@ describe("MPROVesting", function () {
   let TGE_UNLOCK_DELAY: number;
   let TGE_UNLOCK_TIMESTAMP: number;
   let CLIFF_DELAY: number;
+  let VESTING_PERIOD_DURATION: number;
   const TGE_UNLOCK_PERCENT: number = 1000;
   const VESTING_UNLOCK_PERCENT = 1000;
   const UNLOCK_PERCENT_DIVIDER = 10000;
@@ -62,6 +63,7 @@ describe("MPROVesting", function () {
     TGE_UNLOCK_DELAY = ONE_DAY;
     TGE_UNLOCK_TIMESTAMP = currentTimestamp + ONE_DAY;
     CLIFF_DELAY = ONE_DAY * 30;
+    VESTING_PERIOD_DURATION = ONE_DAY;
 
     const MPROVestingFactory: MPROVesting__factory =
       await ethers.getContractFactory("MPROVesting");
@@ -71,7 +73,7 @@ describe("MPROVesting", function () {
       TGE_UNLOCK_PERCENT,
       CLIFF_DELAY,
       VESTING_UNLOCK_PERCENT,
-      ONE_DAY,
+      VESTING_PERIOD_DURATION,
       deployer.address
     );
 
@@ -105,6 +107,16 @@ describe("MPROVesting", function () {
           .connect(deployer)
           .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
       ).to.not.be.reverted;
+    });
+
+    it("Should emit SetTgeUnlockTimestamp event", async function () {
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP + 100)
+      )
+        .to.emit(mproVesting, "SetTgeUnlockTimestamp")
+        .withArgs(TGE_UNLOCK_TIMESTAMP + 100);
     });
 
     it("Should revert when caller is not the owner", async function () {
@@ -188,6 +200,28 @@ describe("MPROVesting", function () {
           .connect(deployer)
           .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY - ONE_DAY)
       ).to.not.be.reverted;
+    });
+
+    it("Should revert when trying to set new tgeUnlockTimestamp after deadline (first timestamp already passed)", async function () {
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
+      ).to.not.be.reverted;
+      await network.provider.send("evm_increaseTime", [
+        TGE_UNLOCK_DELAY + CLIFF_DELAY,
+      ]);
+      await mine();
+
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(
+            TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY + ONE_DAY * 1
+          )
+      ).to.be.revertedWith(
+        "Vesting: TGE unlock time must be less than tgeUnlockTimestampDeadline"
+      );
     });
   });
 
@@ -362,6 +396,76 @@ describe("MPROVesting", function () {
         "MPROVesting: Account is not a beneficiary"
       );
     });
+
+    it("Should not delete previous beneficiaries when called again", async function () {
+      await mproVesting
+        .connect(deployer)
+        .registerBeneficiaries(
+          [ben1.address, ben2.address, ben3.address, ben4.address],
+          [1000, 2000, 3000, 4000]
+        );
+      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
+      expect(await mproVesting.connect(ben2).claimBalance()).to.equal(2000);
+      expect(await mproVesting.connect(ben3).claimBalance()).to.equal(3000);
+      expect(await mproVesting.connect(ben4).claimBalance()).to.equal(4000);
+      await mproVesting
+        .connect(deployer)
+        .registerBeneficiaries(
+          [ben1.address, ben2.address, ben3.address, owner.address],
+          [1000, 2000, 3000, 500]
+        );
+      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
+      expect(await mproVesting.connect(ben2).claimBalance()).to.equal(2000);
+      expect(await mproVesting.connect(ben3).claimBalance()).to.equal(3000);
+      expect(await mproVesting.connect(ben4).claimBalance()).to.equal(4000);
+      expect(await mproVesting.connect(owner).claimBalance()).to.equal(500);
+    });
+
+    it("Should not revert when called with empty args", async function () {
+      await mproVesting
+        .connect(deployer)
+        .registerBeneficiaries(
+          [ben1.address, ben2.address, ben3.address, ben4.address],
+          [1000, 2000, 3000, 4000]
+        );
+      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
+      expect(await mproVesting.connect(ben2).claimBalance()).to.equal(2000);
+      expect(await mproVesting.connect(ben3).claimBalance()).to.equal(3000);
+      expect(await mproVesting.connect(ben4).claimBalance()).to.equal(4000);
+      await mproVesting.connect(deployer).registerBeneficiaries([], []);
+      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
+      expect(await mproVesting.connect(ben2).claimBalance()).to.equal(2000);
+      expect(await mproVesting.connect(ben3).claimBalance()).to.equal(3000);
+      expect(await mproVesting.connect(ben4).claimBalance()).to.equal(4000);
+    });
+
+    it("Should not revert when called with very high amount", async function () {
+      await mproVesting
+        .connect(deployer)
+        .registerBeneficiaries([ben1.address, ben2.address], [1000, 500000000]);
+      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
+      expect(await mproVesting.connect(ben2).claimBalance()).to.equal(
+        500000000
+      );
+    });
+
+    it("Should set to claimed balance when beneficiary is updated to lower than claimed balance", async function () {
+      await mproVesting
+        .connect(deployer)
+        .registerBeneficiaries([ben1.address], [1000]);
+      await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+      await mine();
+      await mproVesting.connect(ben1).claim();
+      const claimed = await mproVesting.connect(ben1).claimedAllocation();
+      const amountToUpdate = 50;
+      expect(claimed).to.be.greaterThan(amountToUpdate);
+      await mproVesting
+        .connect(deployer)
+        .registerBeneficiaries([ben1.address], [amountToUpdate]);
+      expect(await mproVesting.connect(ben1).claimedAllocation()).to.equal(
+        claimed
+      );
+    });
   });
 
   describe("claimBalance function", function () {
@@ -455,7 +559,7 @@ describe("MPROVesting", function () {
       ).to.be.revertedWith("MPROVesting: Account is not a beneficiary");
     });
 
-    it("Should return 0 when vesting is not yet unlocked", async function () {
+    it("Should revert when vesting is not yet unlocked", async function () {
       await mproVesting
         .connect(deployer)
         .registerBeneficiaries([ben1.address], [1000]);
@@ -678,6 +782,259 @@ describe("MPROVesting", function () {
       await mine();
       await expect(mproVesting.connect(owner).claim()).to.be.revertedWith(
         "MPROVesting: Account is not a beneficiary"
+      );
+    });
+  });
+
+  describe("nextReleaseTimestamp", function () {
+    const userAmount = 1000;
+    beforeEach(async function () {
+      await mproVesting
+        .connect(deployer)
+        .registerBeneficiaries([ben1.address], [userAmount]);
+    });
+    it("Should return proper value when called by beneficiary", async function () {
+      await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+      await mine();
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(
+        TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY
+      );
+      await network.provider.send("evm_increaseTime", [CLIFF_DELAY]);
+      await mine();
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(
+        TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY + VESTING_PERIOD_DURATION
+      );
+      await network.provider.send("evm_increaseTime", [
+        VESTING_PERIOD_DURATION,
+      ]);
+      await mine();
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(
+        TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY + VESTING_PERIOD_DURATION * 2
+      );
+    });
+
+    it("Should return proper value when called by non-beneficiary", async function () {
+      await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+      await mine();
+      expect(await mproVesting.connect(owner).nextReleaseTimestamp()).to.equal(
+        TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY
+      );
+      await network.provider.send("evm_increaseTime", [CLIFF_DELAY]);
+      await mine();
+      expect(await mproVesting.connect(owner).nextReleaseTimestamp()).to.equal(
+        TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY + VESTING_PERIOD_DURATION
+      );
+      await network.provider.send("evm_increaseTime", [
+        VESTING_PERIOD_DURATION,
+      ]);
+      await mine();
+      expect(await mproVesting.connect(owner).nextReleaseTimestamp()).to.equal(
+        TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY + VESTING_PERIOD_DURATION * 2
+      );
+    });
+
+    it("Should properly return new higher timestamp", async function () {
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
+      ).to.not.be.reverted;
+      const timestamp = await mproVesting.connect(ben1).nextReleaseTimestamp();
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP + ONE_DAY * 2)
+      ).to.not.be.reverted;
+      expect(
+        await mproVesting.connect(ben1).nextReleaseTimestamp()
+      ).greaterThan(timestamp);
+    });
+
+    it("Should properly return new lower timestamp", async function () {
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP + ONE_DAY * 2)
+      ).to.not.be.reverted;
+      const timestamp = await mproVesting.connect(ben1).nextReleaseTimestamp();
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
+      ).to.not.be.reverted;
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).lessThan(
+        timestamp
+      );
+    });
+
+    it("Should properly return new the same timestamp", async function () {
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
+      ).to.not.be.reverted;
+      const timestamp = await mproVesting.connect(ben1).nextReleaseTimestamp();
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
+      ).to.not.be.reverted;
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(
+        timestamp
+      );
+    });
+
+    it("Should return proper value for high number of vesting periods", async function () {
+      await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+      await mine();
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(
+        TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY
+      );
+      await network.provider.send("evm_increaseTime", [CLIFF_DELAY]);
+      await mine();
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(
+        TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY + VESTING_PERIOD_DURATION
+      );
+      await network.provider.send("evm_increaseTime", [
+        VESTING_PERIOD_DURATION,
+      ]);
+      await mine();
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(
+        TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY + VESTING_PERIOD_DURATION * 2
+      );
+      await network.provider.send("evm_increaseTime", [
+        VESTING_PERIOD_DURATION * 898,
+      ]);
+      await mine();
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(
+        TGE_UNLOCK_TIMESTAMP + CLIFF_DELAY + VESTING_PERIOD_DURATION * 900
+      );
+    });
+  });
+
+  describe("nextReleaseAllocation function", function () {
+    const userAmount = 1000;
+    beforeEach(async function () {
+      await mproVesting
+        .connect(deployer)
+        .registerBeneficiaries([ben1.address], [userAmount]);
+    });
+    it("Should return proper value when called by beneficiary", async function () {
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getTgeUnlockAmount(userAmount)
+      );
+      await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+      await mine();
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getVestingUnlockAmount(userAmount, 1)
+      );
+      await network.provider.send("evm_increaseTime", [CLIFF_DELAY]);
+      await mine();
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getVestingUnlockAmount(userAmount, 1)
+      );
+      const periodsArray = new Array(12).fill(0).map((_, i) => i + 1);
+      for (const period of periodsArray) {
+        let expectedAmount =
+          getTgeUnlockAmount(userAmount) +
+          getVestingUnlockAmount(userAmount, period + 1);
+        if (expectedAmount > userAmount) {
+          expect(
+            await mproVesting.connect(ben1).nextReleaseAllocation()
+          ).to.equal(0);
+        } else {
+          expect(
+            await mproVesting.connect(ben1).nextReleaseAllocation()
+          ).to.equal(getVestingUnlockAmount(userAmount, 1));
+        }
+        await network.provider.send("evm_increaseTime", [
+          VESTING_PERIOD_DURATION,
+        ]);
+        await mine();
+      }
+    });
+
+    it("Should revert when called by non-beneficiary", async function () {
+      await expect(
+        mproVesting.connect(owner).nextReleaseAllocation()
+      ).to.be.revertedWith("MPROVesting: Account is not a beneficiary");
+    });
+
+    it("Should properly return for new higher timestamp", async function () {
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getTgeUnlockAmount(userAmount)
+      );
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
+      ).to.not.be.reverted;
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getVestingUnlockAmount(userAmount, 1)
+      );
+      const timestamp = await mproVesting.connect(ben1).nextReleaseTimestamp();
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP + ONE_DAY * 2)
+      ).to.not.be.reverted;
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getVestingUnlockAmount(userAmount, 1)
+      );
+      expect(
+        await mproVesting.connect(ben1).nextReleaseTimestamp()
+      ).greaterThan(timestamp);
+    });
+
+    it("Should properly return for new lower timestamp", async function () {
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getTgeUnlockAmount(userAmount)
+      );
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP + ONE_DAY * 2)
+      ).to.not.be.reverted;
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getVestingUnlockAmount(userAmount, 1)
+      );
+      const timestamp = await mproVesting.connect(ben1).nextReleaseTimestamp();
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
+      ).to.not.be.reverted;
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).lessThan(
+        timestamp
+      );
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getVestingUnlockAmount(userAmount, 1)
+      );
+    });
+
+    it("Should properly return for new the same timestamp", async function () {
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getTgeUnlockAmount(userAmount)
+      );
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
+      ).to.not.be.reverted;
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getVestingUnlockAmount(userAmount, 1)
+      );
+      const timestamp = await mproVesting.connect(ben1).nextReleaseTimestamp();
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
+      ).to.not.be.reverted;
+      expect(await mproVesting.connect(ben1).nextReleaseAllocation()).to.equal(
+        getVestingUnlockAmount(userAmount, 1)
+      );
+      expect(await mproVesting.connect(ben1).nextReleaseTimestamp()).to.equal(
+        timestamp
       );
     });
   });
