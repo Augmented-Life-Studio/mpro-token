@@ -142,6 +142,7 @@ contract MPROVesting is Context, Ownable {
             _timestamp <= tgeUnlockTimestampDeadline,
             "Vesting: TGE unlock time must be less than tgeUnlockTimestampDeadline"
         );
+        require(tgeUnlockTimestamp > block.timestamp, "Vesting: TGE unlock time already passed");
 
         cliffTimestamp = _timestamp + (cliffTimestamp - tgeUnlockTimestamp);
         tgeUnlockTimestamp = _timestamp;
