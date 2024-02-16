@@ -68,7 +68,6 @@ describe("MPROVesting", function () {
     const MPROVestingFactory: MPROVesting__factory =
       await ethers.getContractFactory("MPROVesting");
     mproVesting = await MPROVestingFactory.deploy(
-      erc20.target,
       TGE_UNLOCK_TIMESTAMP,
       TGE_UNLOCK_PERCENT,
       CLIFF_DELAY,
@@ -76,6 +75,8 @@ describe("MPROVesting", function () {
       VESTING_PERIOD_DURATION,
       deployer.address
     );
+
+    await mproVesting.connect(deployer).setVestingToken(erc20.target);
 
     await erc20
       .connect(deployer)
@@ -87,7 +88,6 @@ describe("MPROVesting", function () {
 
   describe("Deployment", function () {
     it("Should properly deploy and set initial values", async function () {
-      expect(await mproVesting.token()).to.equal(erc20.target);
       expect(await mproVesting.tgeUnlockTimestamp()).to.equal(
         TGE_UNLOCK_TIMESTAMP
       );
@@ -223,6 +223,45 @@ describe("MPROVesting", function () {
         "Vesting: TGE unlock time must be less than tgeUnlockTimestampDeadline"
       );
     });
+  });
+
+  describe("setVestingToken function", function () {
+    let vestingContract: MPROVesting;
+    beforeEach(async function () {
+      const MPROVestingFactory: MPROVesting__factory =
+        await ethers.getContractFactory("MPROVesting");
+      vestingContract = await MPROVestingFactory.deploy(
+        TGE_UNLOCK_TIMESTAMP,
+        TGE_UNLOCK_PERCENT,
+        CLIFF_DELAY,
+        VESTING_UNLOCK_PERCENT,
+        VESTING_PERIOD_DURATION,
+        deployer.address
+      );
+    })
+    it("Should properly setVestingToken only by owner", async function () {
+      await expect(
+        vestingContract.connect(deployer).setVestingToken(erc20.target)
+      ).to.not.be.reverted;
+    });
+    it("Should revert when caller is owner and vesting token is zero address", async function () {
+      await expect(
+        vestingContract.connect(deployer).setVestingToken(ethers.ZeroAddress)
+      ).to.be.revertedWith("Vesting: Invalid vesting token");
+    })
+    it("Should revert when caller is not owner", async function () {
+      await expect(
+        vestingContract.connect(ben1).setVestingToken(erc20.target)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    })
+    it("Should revert when caller is owner and vesting token is already set", async function () {
+      await expect(
+        vestingContract.connect(deployer).setVestingToken(erc20.target)
+      ).to.not.be.reverted;
+      await expect(
+        vestingContract.connect(deployer).setVestingToken(erc20.target)
+      ).to.be.revertedWith("Vesting: Token already set");
+    })
   });
 
   describe("registerBeneficiaries function", function () {
