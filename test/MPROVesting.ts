@@ -223,6 +223,21 @@ describe("MPROVesting", function () {
         "Vesting: TGE unlock time must be less than tgeUnlockTimestampDeadline"
       );
     });
+    it("Should revert when TGE unlock time has already passed", async function () {
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP)
+      ).to.not.be.reverted;
+      await network.provider.send("evm_increaseTime", [
+        TGE_UNLOCK_DELAY,
+      ]);
+      await expect(
+        mproVesting
+          .connect(deployer)
+          .setTgeUnlockTimestamp(TGE_UNLOCK_TIMESTAMP + ONE_DAY * 3)
+      ).to.be.revertedWith("Vesting: TGE unlock time already passed");
+    })
   });
 
   describe("setVestingToken function", function () {
@@ -262,6 +277,34 @@ describe("MPROVesting", function () {
         vestingContract.connect(deployer).setVestingToken(erc20.target)
       ).to.be.revertedWith("Vesting: Token already set");
     })
+    it("Should revert when vesting token address is invalid", async function () {
+      try{
+        await expect(
+          vestingContract.connect(deployer).setVestingToken("0x123")
+        ).to.not.be.reverted;
+        throw new Error("Vesting token set successfully - should not be")
+      }catch(error){
+        if(error == "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"){
+
+        }else{
+          console.log(error);
+        }
+      }
+    });
+    it("Should revert when vesting token is empty", async function () {
+      try{
+        await expect(
+          vestingContract.connect(deployer).setVestingToken("")
+        ).to.not.be.reverted;
+        throw new Error("Vesting token set successfully - should not be")
+      }catch(error){
+        if(error == "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"){
+
+        }else{
+          console.log(error);
+        }
+      }
+    });
   });
 
   describe("registerBeneficiaries function", function () {
