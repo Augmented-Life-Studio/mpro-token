@@ -35,7 +35,7 @@ describe("MPRO", function () {
     );
   });
 
-  describe.only("Deployment", function () {
+  describe("Deployment", function () {
     it("Should properly deploy and set initial values", async function () {
       expect(await mproToken.name()).to.equal("MPRO");
       expect(await mproToken.symbol()).to.equal("MPRO");
@@ -44,6 +44,7 @@ describe("MPRO", function () {
       );
       expect(await mproToken.owner()).to.equal(owner.address);
       expect(await mproToken.totalSupply()).to.equal(ethers.parseEther("100"));
+      expect(await mproToken.maxCap()).to.equal(ethers.parseEther("500000000"));
     });
   });
 
@@ -125,7 +126,7 @@ describe("MPRO", function () {
     });
   });
 
-  describe.only("approve function", function () {
+  describe("approve function", function () {
     it("Should properly approve and check allowance", async function () {
       await mproToken
         .connect(owner)
@@ -241,7 +242,7 @@ describe("MPRO", function () {
     });
   });
 
-  describe.only("transafer function", function () {
+  describe("transafer function", function () {
     it("Should transfer tokens correctly", async function () {
       await mproToken
         .connect(owner)
@@ -373,7 +374,7 @@ describe("MPRO", function () {
     });
   });
 
-  describe.only("transferFrom function", function () {
+  describe("transferFrom function", function () {
     it("Should properly transferFrom", async function () {
       await mproToken
         .connect(owner)

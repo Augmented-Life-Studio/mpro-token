@@ -720,7 +720,6 @@ describe("MPROVesting", function () {
     });
 
     it("Should revert when caller is not beneficiary (TGE_UNLOCK_TIMESTAMP is not reached)", async function () {
-      await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
       await mine();
       await expect(
         mproVesting.connect(owner).enableForRelease()
@@ -736,7 +735,7 @@ describe("MPROVesting", function () {
     });
 
     it("Should revert when caller is not beneficiary (CLIFF_TIMESTAMP is reached)", async function () {
-      await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY]);
+      await network.provider.send("evm_increaseTime", [TGE_UNLOCK_DELAY + CLIFF_DELAY]);
       await mine();
       await expect(
         mproVesting.connect(owner).enableForRelease()
