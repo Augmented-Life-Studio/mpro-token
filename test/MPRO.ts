@@ -44,6 +44,7 @@ describe("MPRO", function () {
       );
       expect(await mproToken.owner()).to.equal(owner.address);
       expect(await mproToken.totalSupply()).to.equal(ethers.parseEther("100"));
+      expect(await mproToken.maxCap()).to.equal(ethers.parseEther("500000000"));
     });
   });
 

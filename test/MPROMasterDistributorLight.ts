@@ -23,7 +23,6 @@ describe('MPROMasterDistributorLight', () => {
       ...addrs
     ] = await ethers.getSigners()
 
-
     const MasterDistributorFactory = await ethers.getContractFactory("contracts/MPROMasterDistributorLight.sol:MPROMasterDistributor") as MPROMasterDistributor__factory;
     mproMasterDistributor = await MasterDistributorFactory.deploy(owner.address);
 
@@ -156,4 +155,47 @@ describe('MPROMasterDistributorLight', () => {
       expect(await mproMasterDistributor.approveAllowed(addrs[0].address, addrs[1].address)).to.be.true;
     })
   })
+  describe("renounceRole function", () => {
+    it("Should properly renounce the role", async () => {
+      await expect(
+        mproMasterDistributor
+          .connect(lister)
+          .renounceRole(await mproMasterDistributor.LISTER_ROLE(), lister)
+      ).to.not.be.reverted;
+    });
+
+    it("Should revert when trying to renounce for somebody else", async () => {
+      await expect(
+        mproMasterDistributor
+          .connect(lister)
+          .renounceRole(await mproMasterDistributor.LISTER_ROLE(), owner)
+      ).to.be.revertedWith("AccessControl: can only renounce roles for self");
+    });
+
+    it("Should revert when trying to renounce for address zero", async () => {
+      await expect(
+        mproMasterDistributor
+          .connect(lister)
+          .renounceRole(
+            await mproMasterDistributor.LISTER_ROLE(),
+            ethers.ZeroAddress
+          )
+      ).to.be.revertedWith("MPROMasterDistributor: Action on address zero");
+    });
+
+    it("Should revert when trying to renounce again", async () => {
+      await expect(
+        mproMasterDistributor
+          .connect(lister)
+          .renounceRole(await mproMasterDistributor.LISTER_ROLE(), lister)
+      ).to.not.be.reverted;
+      await expect(
+        mproMasterDistributor
+          .connect(lister)
+          .renounceRole(await mproMasterDistributor.LISTER_ROLE(), lister)
+      ).to.be.revertedWith(
+        "MPROMasterDistributor: Account does not have role"
+      );
+    });
+  });
 });

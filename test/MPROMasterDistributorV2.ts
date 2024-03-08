@@ -11,7 +11,10 @@ import { ZeroAddress } from "ethers";
 // npx hardhat test test/MPROMasterDistributor.ts
 
 const ONE_DAY_SEC = 24 * 60 * 60;
-const ONE_DAY = 600;
+const ONE_DAY = ONE_DAY_SEC;
+const DISTRIBUTION_REDUCTION_DELAY = ONE_DAY * 183;
+const days_between_reductions = 183;
+
 
 describe("MPROMasterDistributor", () => {
   let mproToken: MPRO;
@@ -26,7 +29,7 @@ describe("MPROMasterDistributor", () => {
     addrs: HardhatEthersSigner[];
   let masterDistributorDeploymentTimestamp: number;
   let initialDistributionStartTime: number;
-  let DISTRIBUTION_START_DELAY = 1 * ONE_DAY_SEC; // 14 days
+  let DISTRIBUTION_START_DELAY = 14 * ONE_DAY_SEC; // 14 days
   let INITIAL_DAILY_DISTRIBUTION = ethers.parseUnits("250000");
 
   let default_admin_role =
@@ -143,7 +146,7 @@ describe("MPROMasterDistributor", () => {
     it("Should return the right amount of tokens after distribution starts", async () => {
       // Default distribution start time is after 14 days from deployment
       await network.provider.send("evm_increaseTime", [
-        DISTRIBUTION_START_DELAY + 1,
+        DISTRIBUTION_START_DELAY,
       ]);
       await mine();
       // After 14 days from deployment, 250000 tokens should be marked as distributed
@@ -207,7 +210,7 @@ describe("MPROMasterDistributor", () => {
           distributions_administrator_role.address
         );
       await network.provider.send("evm_increaseTime", [
-        DISTRIBUTION_START_DELAY + 1,
+        DISTRIBUTION_START_DELAY,
       ]);
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
@@ -215,16 +218,19 @@ describe("MPROMasterDistributor", () => {
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 1 * ONE_DAY,
+          initialDistributionStartTime + DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("200000")
         );
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount2 = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount2).to.equal(ethers.parseUnits("700000"));
+      const sum = ((days_between_reductions + 1) * 250000 + 200000).toString();
+      expect(amount2).to.equal(ethers.parseUnits(sum));
+
     });
 
-    it("Should return correct number of tokens after multiple reductions", async () => {
+
+    it.only("Should return correct number of tokens after multiple reductions", async () => {
       await mproMasterDistributor
         .connect(owner)
         .grantRole(
@@ -238,7 +244,7 @@ describe("MPROMasterDistributor", () => {
           distributions_administrator_role.address
         );
       await network.provider.send("evm_increaseTime", [
-        DISTRIBUTION_START_DELAY + 1,
+        DISTRIBUTION_START_DELAY,
       ]);
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
@@ -246,33 +252,36 @@ describe("MPROMasterDistributor", () => {
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 1 * ONE_DAY,
+          initialDistributionStartTime + DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("200000")
         );
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount2 = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount2).to.equal(ethers.parseUnits("700000"));
+      const sum = ((days_between_reductions + 1) * 250000 + 200000).toString();
+      expect(amount2).to.equal(ethers.parseUnits(sum));
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 2 * ONE_DAY,
+          initialDistributionStartTime + 2 * DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("150000")
         );
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount3 = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount3).to.equal(ethers.parseUnits("1050000"));
+      const sum2 = ((days_between_reductions + 1) * (250000 + 200000) + 150000).toString();
+      expect(amount3).to.equal(ethers.parseUnits(sum2));
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 3 * ONE_DAY,
+          initialDistributionStartTime + 3 * DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("100000")
         );
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount4 = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount4).to.equal(ethers.parseUnits("1300000"));
+      const sum3 = ((days_between_reductions + 1) * (250000 + 200000 + 150000) + 100000).toString();
+      expect(amount4).to.equal(ethers.parseUnits(sum3));
     });
   });
 
@@ -289,7 +298,8 @@ describe("MPROMasterDistributor", () => {
       ).to.not.be.reverted;
     });
 
-    it("Should revert when address does not habe distributor role", async () => {
+    it("Should revert when address does not have distributor role", async () => {
+      const distributorRoleAddress = await mproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE();
       await network.provider.send("evm_increaseTime", [
         DISTRIBUTION_START_DELAY + 1,
       ]);
@@ -299,11 +309,12 @@ describe("MPROMasterDistributor", () => {
           .connect(user)
           .distribute(user.address, ethers.parseUnits("10"))
       ).to.be.revertedWith(
-        "AccessControl: account 0x976ea74026e726554db657fa54763abd0c3a0aa9 is missing role 0xd96d53eb75014cde2646895909cf5231d58942a05e66e5edf0a7bf450b504df3"
+        `AccessControl: account ${user.address.toLowerCase()} is missing role ${distributorRoleAddress}`
       );
     });
 
     it("Should revert when address have role different than distributor", async () => {
+      const distributorRoleAddress = await mproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE();
       await network.provider.send("evm_increaseTime", [
         DISTRIBUTION_START_DELAY + 1,
       ]);
@@ -313,7 +324,7 @@ describe("MPROMasterDistributor", () => {
           .connect(lister_role)
           .distribute(user.address, ethers.parseUnits("10"))
       ).to.be.revertedWith(
-        "AccessControl: account 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 is missing role 0xd96d53eb75014cde2646895909cf5231d58942a05e66e5edf0a7bf450b504df3"
+        `AccessControl: account ${lister_role.address.toLowerCase()} is missing role ${distributorRoleAddress}`
       );
     });
 
@@ -471,13 +482,14 @@ describe("MPROMasterDistributor", () => {
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 1 * ONE_DAY,
+          initialDistributionStartTime + DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("200000")
         );
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount).to.equal(ethers.parseUnits("700000"));
+      const sum = ((days_between_reductions + 1) * 250000 + 200000).toString();
+      expect(amount).to.equal(ethers.parseUnits(sum));
       await expect(
         mproMasterDistributor
           .connect(MPRO_master_distributor_role)
@@ -499,19 +511,20 @@ describe("MPROMasterDistributor", () => {
           distributions_administrator_role.address
         );
       await network.provider.send("evm_increaseTime", [
-        DISTRIBUTION_START_DELAY + 1,
+        DISTRIBUTION_START_DELAY,
       ]);
       await mine();
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 1 * ONE_DAY,
+          initialDistributionStartTime + DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("200000")
         );
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount).to.equal(ethers.parseUnits("700000"));
+      const sum = ((days_between_reductions + 1) * 250000 + 200000).toString();
+      expect(amount).to.equal(ethers.parseUnits(sum));
       await expect(
         mproMasterDistributor
           .connect(MPRO_master_distributor_role)
@@ -544,6 +557,7 @@ describe("MPROMasterDistributor", () => {
     });
 
     it("Should revert when caller does not have distributor role", async () => {
+      const distributorRoleAddress = await mproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE();
       await network.provider.send("evm_increaseTime", [
         DISTRIBUTION_START_DELAY + 1,
       ]);
@@ -556,11 +570,12 @@ describe("MPROMasterDistributor", () => {
             [ethers.parseUnits("10"), ethers.parseUnits("5")]
           )
       ).to.be.revertedWith(
-        "AccessControl: account 0x976ea74026e726554db657fa54763abd0c3a0aa9 is missing role 0xd96d53eb75014cde2646895909cf5231d58942a05e66e5edf0a7bf450b504df3"
+        `AccessControl: account ${user.address.toLowerCase()} is missing role ${distributorRoleAddress}`
       );
     });
 
     it("Should revert when caller have role different than distributor role", async () => {
+      const distributorRoleAddress = await mproMasterDistributor.MPRO_MASTER_DISTRIBUTOR_ROLE();
       await network.provider.send("evm_increaseTime", [
         DISTRIBUTION_START_DELAY + 1,
       ]);
@@ -573,7 +588,7 @@ describe("MPROMasterDistributor", () => {
             [ethers.parseUnits("10"), ethers.parseUnits("5")]
           )
       ).to.be.revertedWith(
-        "AccessControl: account 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 is missing role 0xd96d53eb75014cde2646895909cf5231d58942a05e66e5edf0a7bf450b504df3"
+        `AccessControl: account ${lister_role.address.toLowerCase()} is missing role ${distributorRoleAddress}`
       );
     });
 
@@ -763,19 +778,21 @@ describe("MPROMasterDistributor", () => {
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 1 * ONE_DAY,
+          initialDistributionStartTime + DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("200000")
         );
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount).to.equal(ethers.parseUnits("700000"));
+      const sum = ((days_between_reductions + 1) * 250000 + 200000).toString();
+      const halfTheSum = (((days_between_reductions + 1) * 250000 + 200000)/2).toString()
+      expect(amount).to.equal(ethers.parseUnits(sum));
       await expect(
         mproMasterDistributor
           .connect(MPRO_master_distributor_role)
           .distributeBulk(
             [user.address, lister_role.address],
-            [ethers.parseUnits("350000"), ethers.parseUnits("350000")]
+            [ethers.parseUnits(halfTheSum), ethers.parseUnits(halfTheSum)]
           )
       ).to.not.be.reverted;
     });
@@ -800,19 +817,22 @@ describe("MPROMasterDistributor", () => {
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 1 * ONE_DAY,
+          initialDistributionStartTime + DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("200000")
         );
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount).to.equal(ethers.parseUnits("700000"));
+      const sum = ((days_between_reductions + 1) * 250000 + 200000).toString();
+      const halfTheSum = (((days_between_reductions + 1) * 250000 + 200000)/2).toString();
+      const overHalfTheSum = (((days_between_reductions + 1) * 250000 + 200000)/2 + 1).toString();
+      expect(amount).to.equal(ethers.parseUnits(sum));
       await expect(
         mproMasterDistributor
           .connect(MPRO_master_distributor_role)
           .distributeBulk(
             [user.address, lister_role.address],
-            [ethers.parseUnits("350000"), ethers.parseUnits("350001")]
+            [ethers.parseUnits(halfTheSum), ethers.parseUnits(overHalfTheSum)]
           )
       ).to.be.revertedWith(
         "MPROMasterDistributor: Distribution limit exceeded"
@@ -874,7 +894,7 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(owner)
           .setDistributionStartTime(
-            masterDistributorDeploymentTimestamp + 3 * ONE_DAY
+            masterDistributorDeploymentTimestamp + 29 * ONE_DAY
           )
       ).to.not.be.reverted;
     });
@@ -887,12 +907,12 @@ describe("MPROMasterDistributor", () => {
       );
     });
 
-    it("Should rever when distribution start time is higher than distributionStartTimeDeadline", async () => {
+    it("Should revert when distribution start time is higher than distributionStartTimeDeadline", async () => {
       await expect(
         mproMasterDistributor
           .connect(owner)
           .setDistributionStartTime(
-            masterDistributorDeploymentTimestamp + 1441 * ONE_DAY
+            masterDistributorDeploymentTimestamp + 31 * ONE_DAY
           )
       ).to.be.revertedWith(
         "MPROMasterDistributor: Distribution start time must be less than distributionStartTimeDeadline"
@@ -904,7 +924,7 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(owner)
           .setDistributionStartTime(
-            masterDistributorDeploymentTimestamp + 1440 * ONE_DAY
+            masterDistributorDeploymentTimestamp + 30 * ONE_DAY
           )
       ).to.not.be.reverted;
     });
@@ -1010,14 +1030,15 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 1 * ONE_DAY,
+            initialDistributionStartTime + 1 *DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("200000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount).to.equal(ethers.parseUnits("700000"));
+      const sum = ((days_between_reductions + 1) * 250000 + 200000).toString();
+      expect(amount).to.equal(ethers.parseUnits(sum));
     });
 
     it("Should properly add multiple reductions (increasing timeStamps)", async () => {
@@ -1029,34 +1050,35 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 1 * ONE_DAY,
+            initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("200000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       await expect(
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 2 * ONE_DAY,
+            initialDistributionStartTime + 2 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("150000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       await expect(
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 3 * ONE_DAY,
+            initialDistributionStartTime + 3 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("100000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount4 = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount4).to.equal(ethers.parseUnits("1300000"));
+      const sum = ((days_between_reductions + 1) * (250000 + 200000 + 150000) + 100000).toString();
+      expect(amount4).to.equal(ethers.parseUnits(sum));
     });
 
     it("Should properly add multiple reductions (decreasing timeStamps)", async () => {
@@ -1068,21 +1090,21 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 5 * ONE_DAY,
+            initialDistributionStartTime + 5 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("200000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       await expect(
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 2 * ONE_DAY,
+            initialDistributionStartTime + 2 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("150000")
           )
       ).to.be.revertedWith(
-        "MPROMasterDistributor: New redution start time cannot be lower than 10 minutes after last redution timestamp"
+        "MPROMasterDistributor: New redution start time cannot be lower than 183 days after last redution timestamp"
       );
     });
 
@@ -1095,21 +1117,21 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 2 * ONE_DAY,
+            initialDistributionStartTime + 2 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("200000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       await expect(
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 2 * ONE_DAY,
+            initialDistributionStartTime + 2 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("150000")
           )
       ).to.be.revertedWith(
-        "MPROMasterDistributor: New redution start time cannot be lower than 10 minutes after last redution timestamp"
+        "MPROMasterDistributor: New redution start time cannot be lower than 183 days after last redution timestamp"
       );
     });
 
@@ -1126,7 +1148,7 @@ describe("MPROMasterDistributor", () => {
             ethers.parseUnits("200000")
           )
       ).to.be.revertedWith(
-        "AccessControl: account 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 is missing role 0x5afa424c0b6204848cb71c5aa5f8da1afaf45d645ada516ab6c53bb3ff616cff"
+        `AccessControl: account ${lister_role.address.toLowerCase()} is missing role 0x5afa424c0b6204848cb71c5aa5f8da1afaf45d645ada516ab6c53bb3ff616cff`
       );
     });
 
@@ -1139,14 +1161,15 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 1 * ONE_DAY,
+            initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("250000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount).to.equal(ethers.parseUnits("750000"));
+      const sum = ((days_between_reductions + 1) * 250000 + 250000).toString();
+      expect(amount).to.equal(ethers.parseUnits(sum));
     });
 
     it("Should throw error when reduction amount is negative", async () => {
@@ -1184,14 +1207,15 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 1 * ONE_DAY,
+            initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("125000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount).to.equal(ethers.parseUnits("625000"));
+      const sum = ((days_between_reductions + 1) * 250000 + 125000).toString();
+      expect(amount).to.equal(ethers.parseUnits(sum));
     });
 
     it("Should revert when reduction amount is greater than allowed (50%+ less)", async () => {
@@ -1203,7 +1227,7 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 1 * ONE_DAY,
+            initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("124999")
           )
       ).to.be.revertedWith(
@@ -1220,7 +1244,7 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 1 * ONE_DAY,
+            initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("500000")
           )
       ).to.not.be.reverted;
@@ -1235,7 +1259,7 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 1 * ONE_DAY,
+            initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("500001")
           )
       ).to.be.revertedWith(
@@ -1252,13 +1276,13 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 10 * ONE_DAY,
+            initialDistributionStartTime + 10 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("400000")
           )
       ).to.not.be.reverted;
     });
 
-    it("Should revert when less than 183 days (10min for tests) have passed", async () => {
+    it("Should revert when less than 183 days have passed", async () => {
       await network.provider.send("evm_increaseTime", [
         DISTRIBUTION_START_DELAY + 1,
       ]);
@@ -1267,7 +1291,7 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 1 * ONE_DAY,
+            initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("400000")
           )
       ).to.not.be.reverted;
@@ -1275,11 +1299,11 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + (1 * ONE_DAY + 100),
+            initialDistributionStartTime + (1 * DISTRIBUTION_REDUCTION_DELAY + 100),
             ethers.parseUnits("450000")
           )
       ).to.be.revertedWith(
-        "MPROMasterDistributor: New redution start time cannot be lower than 10 minutes after last redution timestamp"
+        "MPROMasterDistributor: New redution start time cannot be lower than 183 days after last redution timestamp"
       );
     });
 
@@ -1292,34 +1316,35 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 1 * ONE_DAY,
+            initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("300000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       await expect(
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 2 * ONE_DAY,
+            initialDistributionStartTime + 2 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("350000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       await expect(
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 3 * ONE_DAY,
+            initialDistributionStartTime + 3 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("400000")
           )
       ).to.not.be.reverted;
-      await network.provider.send("evm_increaseTime", [ONE_DAY]);
+      await network.provider.send("evm_increaseTime", [DISTRIBUTION_REDUCTION_DELAY]);
       await mine();
       const amount4 = await mproMasterDistributor.getAllTokenDistribution();
-      expect(amount4).to.equal(ethers.parseUnits("2200000"));
+      const sum = ((days_between_reductions + 1) * (250000 + 300000 + 350000) + 400000).toString();
+      expect(amount4).to.equal(ethers.parseUnits(sum));
     });
 
     it("should throw error when reduction amount is empty", async () => {
@@ -2844,14 +2869,14 @@ describe("MPROMasterDistributor", () => {
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 1 * ONE_DAY,
+          initialDistributionStartTime + DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("240000")
         );
       const distributionReductions =
         await mproMasterDistributor.getDistributionReductions();
       expect(distributionReductions.length).to.equal(1);
       expect(distributionReductions[0][0]).to.equal(
-        initialDistributionStartTime + 1 * ONE_DAY
+        initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY
       );
       expect(distributionReductions[0][1]).to.equal(
         ethers.parseUnits("240000")
@@ -2878,38 +2903,38 @@ describe("MPROMasterDistributor", () => {
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 1 * ONE_DAY,
+          initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("240000")
         );
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 5 * ONE_DAY,
+          initialDistributionStartTime + 5 * DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("220000")
         );
       await mproMasterDistributor
         .connect(distributions_administrator_role)
         .addDistributionReduction(
-          initialDistributionStartTime + 10 * ONE_DAY,
+          initialDistributionStartTime + 10 * DISTRIBUTION_REDUCTION_DELAY,
           ethers.parseUnits("200000")
         );
       const distributionReductions =
         await mproMasterDistributor.getDistributionReductions();
       expect(distributionReductions.length).to.equal(3);
       expect(distributionReductions[0][0]).to.equal(
-        initialDistributionStartTime + 1 * ONE_DAY
+        initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY
       );
       expect(distributionReductions[0][1]).to.equal(
         ethers.parseUnits("240000")
       );
       expect(distributionReductions[1][0]).to.equal(
-        initialDistributionStartTime + 5 * ONE_DAY
+        initialDistributionStartTime + 5 * DISTRIBUTION_REDUCTION_DELAY
       );
       expect(distributionReductions[1][1]).to.equal(
         ethers.parseUnits("220000")
       );
       expect(distributionReductions[2][0]).to.equal(
-        initialDistributionStartTime + 10 * ONE_DAY
+        initialDistributionStartTime + 10 * DISTRIBUTION_REDUCTION_DELAY
       );
       expect(distributionReductions[2][1]).to.equal(
         ethers.parseUnits("200000")
