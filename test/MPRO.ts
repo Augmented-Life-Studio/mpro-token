@@ -58,25 +58,17 @@ describe("MPRO", function () {
     it("Should burn tokens correctly", async function () {
       await mproToken
         .connect(owner)
-        .burn(owner.address, ethers.parseEther("10"));
+        .burn(ethers.parseEther("10"));
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("90")
       );
       expect(await mproToken.totalSupply()).to.equal(ethers.parseEther("90"));
     });
 
-    it("Should revert for address zero", async function () {
-      await expect(
-        mproToken
-          .connect(owner)
-          .burn(ethers.ZeroAddress, ethers.parseEther("10"))
-      ).to.be.revertedWith("ERC20: burn from the zero address");
-    });
-
-    it("Should recert for burn amount equal to zero", async function () {
+    it("Should revert for burn amount equal to zero", async function () {
       await mproToken
         .connect(owner)
-        .burn(owner.address, ethers.parseEther("0"));
+        .burn(ethers.parseEther("0"));
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("100")
       );
@@ -87,38 +79,16 @@ describe("MPRO", function () {
       try {
         await mproToken
           .connect(owner)
-          .burn(owner.address, ethers.parseEther("-10"));
-        throw new Error("Burn successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: value out-of-bounds (argument="amount", value=-10000000000000000000, code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
-      }
-    });
-
-    it("Should throw error when address is invalid", async function () {
-      try {
-        await mproToken.connect(owner).burn("0x123", ethers.parseEther("10"));
-        throw new Error("Burn successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"
-        ) {
-        } else {
-          console.log(error);
-        }
+          .burn(ethers.parseEther("-10"))
+      } catch (error: any) {
+        expect(error.shortMessage).to.equal("value out-of-bounds")
       }
     });
 
     it("Should properly return number of tokens left after burning for a user", async function () {
       await mproToken
-        .connect(addr1)
-        .burn(owner.address, ethers.parseEther("10"));
+        .connect(owner)
+        .burn(ethers.parseEther("10"));
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("90")
       );
@@ -150,15 +120,8 @@ describe("MPRO", function () {
         await mproToken
           .connect(owner)
           .approve(addr1.address, ethers.parseEther("-10"));
-        throw new Error("approve successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: value out-of-bounds (argument="_value", value=-10000000000000000000, code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+      } catch (error: any) {
+        expect(error.shortMessage).to.equal("value out-of-bounds")
       }
     });
 

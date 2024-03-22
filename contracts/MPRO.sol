@@ -193,11 +193,10 @@ contract MPRO is OFTV2, ERC20Votes {
      * separation of concerns allows the `_burn` function to handle the core logic, while the external
      * `burn` function can be adapted or extended in derived contracts.
      *
-     * @param account The address from which the tokens will be burned.
      * @param amount The amount of tokens to be burned from the specified account.
      */
-    function burn(address account, uint256 amount) external virtual {
-        _burn(account, amount);
+    function burn(uint256 amount) external virtual {
+        _burn(msg.sender, amount);
     }
 
     /**
@@ -367,10 +366,7 @@ contract MPRO is OFTV2, ERC20Votes {
         uint256 amount
     ) internal override(ERC20) {
         if (from == address(0)) {
-            require(
-                _totalSupply <= _maxCap,
-                "ERC20Capped: cap exceeded"
-            );
+            require(_totalSupply <= _maxCap, "ERC20Capped: cap exceeded");
         }
         super._beforeTokenTransfer(from, to, amount);
     }

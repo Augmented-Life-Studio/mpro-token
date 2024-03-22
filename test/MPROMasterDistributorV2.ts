@@ -8,7 +8,7 @@ import { MPROMasterDistributor__factory } from "../typechain-types/factories/con
 import { MPRO__factory } from "../typechain-types/factories/contracts/MPRO.sol";
 import { ZeroAddress } from "ethers";
 
-// npx hardhat test test/MPROMasterDistributor.ts
+// npx hardhat test test/MPROMasterDistributorV2.ts
 
 const ONE_DAY_SEC = 24 * 60 * 60;
 const ONE_DAY = ONE_DAY_SEC;
@@ -785,7 +785,7 @@ describe("MPROMasterDistributor", () => {
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
       const sum = ((days_between_reductions + 1) * 250000 + 200000).toString();
-      const halfTheSum = (((days_between_reductions + 1) * 250000 + 200000)/2).toString()
+      const halfTheSum = (((days_between_reductions + 1) * 250000 + 200000) / 2).toString()
       expect(amount).to.equal(ethers.parseUnits(sum));
       await expect(
         mproMasterDistributor
@@ -824,8 +824,8 @@ describe("MPROMasterDistributor", () => {
       await mine();
       const amount = await mproMasterDistributor.getAllTokenDistribution();
       const sum = ((days_between_reductions + 1) * 250000 + 200000).toString();
-      const halfTheSum = (((days_between_reductions + 1) * 250000 + 200000)/2).toString();
-      const overHalfTheSum = (((days_between_reductions + 1) * 250000 + 200000)/2 + 1).toString();
+      const halfTheSum = (((days_between_reductions + 1) * 250000 + 200000) / 2).toString();
+      const overHalfTheSum = (((days_between_reductions + 1) * 250000 + 200000) / 2 + 1).toString();
       expect(amount).to.equal(ethers.parseUnits(sum));
       await expect(
         mproMasterDistributor
@@ -1030,7 +1030,7 @@ describe("MPROMasterDistributor", () => {
         mproMasterDistributor
           .connect(distributions_administrator_role)
           .addDistributionReduction(
-            initialDistributionStartTime + 1 *DISTRIBUTION_REDUCTION_DELAY,
+            initialDistributionStartTime + 1 * DISTRIBUTION_REDUCTION_DELAY,
             ethers.parseUnits("200000")
           )
       ).to.not.be.reverted;
