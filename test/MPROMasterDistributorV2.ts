@@ -230,7 +230,7 @@ describe("MPROMasterDistributor", () => {
     });
 
 
-    it.only("Should return correct number of tokens after multiple reductions", async () => {
+    it("Should return correct number of tokens after multiple reductions", async () => {
       await mproMasterDistributor
         .connect(owner)
         .grantRole(

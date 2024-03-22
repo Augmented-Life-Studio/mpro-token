@@ -80,6 +80,7 @@ describe("MPRO", function () {
         await mproToken
           .connect(owner)
           .burn(ethers.parseEther("-10"))
+        expect.fail("Expected revert not received");
       } catch (error: any) {
         expect(error.shortMessage).to.equal("value out-of-bounds")
       }
@@ -120,6 +121,7 @@ describe("MPRO", function () {
         await mproToken
           .connect(owner)
           .approve(addr1.address, ethers.parseEther("-10"));
+        expect.fail("Expected revert not received");
       } catch (error: any) {
         expect(error.shortMessage).to.equal("value out-of-bounds")
       }
@@ -138,15 +140,9 @@ describe("MPRO", function () {
         await mproToken
           .connect(owner)
           .approve("0x123", ethers.parseEther("20"));
-        throw new Error("Approve successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"
-        ) {
-        } else {
-          console.log(error);
-        }
+        expect.fail("Expected revert not received");
+      } catch (error: any) {
+        expect(error.message).to.equal("Method 'HardhatEthersProvider.resolveName' is not implemented")
       }
     });
 
@@ -247,15 +243,9 @@ describe("MPRO", function () {
         await mproToken
           .connect(owner)
           .transfer("0x123", ethers.parseEther("10"));
-        throw new Error("transfer successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"
-        ) {
-        } else {
-          console.log(error);
-        }
+        expect.fail("Expected revert not received");
+      } catch (error: any) {
+        expect(error.message).to.be.equal("Method 'HardhatEthersProvider.resolveName' is not implemented")
       }
     });
 
@@ -276,15 +266,9 @@ describe("MPRO", function () {
         await mproToken
           .connect(owner)
           .transfer(addr1.address, ethers.parseEther("-10"));
-        throw new Error("transfer successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: value out-of-bounds (argument="_value", value=-10000000000000000000, code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+        expect.fail("Expected revert not received");
+      } catch (error: any) {
+        expect(error.shortMessage).to.be.equal("value out-of-bounds")
       }
     });
 
@@ -384,11 +368,8 @@ describe("MPRO", function () {
     });
 
     it("Should throw error when tranferring negative number of tokens", async function () {
-      await mproToken
-        .connect(owner)
-        .approve(addr1.address, ethers.parseEther("20"));
       try {
-        await expect(
+        await
           mproToken
             .connect(addr1)
             .transferFrom(
@@ -396,16 +377,9 @@ describe("MPRO", function () {
               addr3.address,
               ethers.parseEther("-10")
             )
-        ).to.not.be.reverted;
-        throw new Error("transfer successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: value out-of-bounds (argument="_amount", value=-10000000000000000000, code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+        expect.fail("Expected revert not received");
+      } catch (error: any) {
+        expect(error.shortMessage).to.be.equal("value out-of-bounds")
       }
     });
 
