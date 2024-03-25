@@ -66,5 +66,13 @@ npx hardhat --network polygon oftSendTokens --target-network ethereum --qty 1 --
 npx hardhat --network polygon oftSendTokens --target-network bsc --qty 1 --local-contract MPROLight --remote-contract MPROLight --from-address 0x --to-address 0x
 ```
 
+Short contracts description:
+
+- MPRO: Main contract that holds the tokens and is responsible for minting and burning.
+- MPROLight: Contract that is used to send tokens to other chains. It is a light version of the MPRO contract, with only the necessary functions to send tokens without mint function.
+
+- MPROMasterDistributor: Contract that is used to distribute tokens to the users. It is responsible for distributing them to the users. Also cointains whitelist, blocklist and burn rate for the users.
+- MPROMasterDistributorLight: Contract that manages whitelist, blocklist and burn rate for the users. 
+
 
 

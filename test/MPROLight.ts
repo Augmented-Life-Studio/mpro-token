@@ -215,7 +215,7 @@ describe("MPROLight", function () {
       );
       await mproTokenLight
         .connect(deployer)
-        .burn(deployer.address, totalAmount);
+        .burn(totalAmount);
       expect(await mproTokenLight.totalSupply()).to.equal(0);
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(0);
     });

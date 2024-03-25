@@ -292,8 +292,11 @@ contract MPRO is OFTV2, ERC20Votes {
         address _to,
         uint256 _amount
     ) public override returns (bool) {
-        mproMasterDistributor.transferAllowed(_from, _to, _msgSender());
-        _transferFrom(_from, _to, _burnOnTransfer(_from, _amount));
+        address spender = _msgSender();
+        mproMasterDistributor.transferAllowed(_from, _to, spender);
+        // Chack allowance before passing deducted amount by burn rate to _transferFrom
+        if (_from != spender) _spendAllowance(_from, spender, _amount);
+        _transfer(_from, _to, _burnOnTransfer(_from, _amount));
         return true;
     }
 

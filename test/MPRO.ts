@@ -321,6 +321,7 @@ describe("MPRO", function () {
     });
   });
 
+  // npx hardhat test test/MPRO.ts --grep "transferFrom function"
   describe("transferFrom function", function () {
     it("Should properly transferFrom", async function () {
       await mproToken
@@ -353,6 +354,18 @@ describe("MPRO", function () {
         mproToken
           .connect(addr1)
           .transferFrom(owner.address, addr3.address, ethers.parseEther("30"))
+      ).to.be.revertedWith("ERC20: insufficient allowance");
+    });
+
+    it("Should correctly revert transferFrom on burRate = 10%", async function () {
+      await masterDistributor.connect(owner).setBurnRate(1000);
+      await mproToken
+        .connect(owner)
+        .approve(addr1.address, ethers.parseEther("20"));
+      await expect(
+        mproToken
+          .connect(addr1)
+          .transferFrom(owner.address, addr3.address, ethers.parseEther("21"))
       ).to.be.revertedWith("ERC20: insufficient allowance");
     });
 

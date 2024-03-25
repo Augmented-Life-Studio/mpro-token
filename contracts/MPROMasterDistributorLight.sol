@@ -8,9 +8,9 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 /**
- * @title MPRO Master Distributor Contract
- * @dev The MPROMasterDistributor contract manages token distribution and related operations.
- * It is responsible for distributing tokens to eligible recipients based on specified rules and
+ * @title MPRO Master Distributor Contract Light
+ * @dev The MPROMasterDistributor contract manages distributions logic.
+ * It is responsible for managing rules as burn rate, blocklist, and whitelist.
  * configurations. This contract utilizes the AccessControl feature for role-based access control.
  *
  * This contract extends the Context and AccessControl contracts to leverage their functionality.
