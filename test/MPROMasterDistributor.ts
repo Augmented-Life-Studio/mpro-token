@@ -87,6 +87,7 @@ describe('MPROMasterDistributor', () => {
       expect(twoDaysAfterAmount).to.equal(ethers.parseUnits("750000"));
     });
   })
+  // npx hardhat test test/MPROMasterDistributor.ts --grep "Distribute function"
   describe("Distribute function", () => {
     it("Should return error before distribution starts", async () => {
       await expect(mproMasterDistributor.connect(distributor).distribute(deployer.address, ethers.parseUnits("10"))).to.be.revertedWith("MPROMasterDistributor: Distribution is not enabled yet");

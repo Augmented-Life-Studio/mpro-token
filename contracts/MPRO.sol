@@ -48,8 +48,6 @@ contract MPRO is OFTV2, ERC20Votes {
 
     uint256 private constant _maxCap = 500_000_000 * 10 ** 18;
 
-    uint256 private _totalSupply;
-
     /**
      * @dev Constructor to initialize the contract with specific parameters.
      *
@@ -89,8 +87,7 @@ contract MPRO is OFTV2, ERC20Votes {
         address _owner
     ) OFTV2(_name, _symbol, 6, _lzEndpoint) ERC20Permit(_name) {
         for (uint256 i = 0; i < premintAddresses.length; i++) {
-            _totalSupply += premintValues[i];
-            super._mint(premintAddresses[i], premintValues[i]);
+            _mint(premintAddresses[i], premintValues[i]);
         }
         mproMasterDistributor = IMPROMasterDistributor(_mproMasterDistributor);
         _transferOwnership(_owner);
@@ -145,7 +142,6 @@ contract MPRO is OFTV2, ERC20Votes {
      */
     function mint(address account, uint256 amount) external virtual {
         mproMasterDistributor.mintAllowed(_msgSender());
-        _totalSupply += amount;
         _mint(account, amount);
     }
 
@@ -369,7 +365,11 @@ contract MPRO is OFTV2, ERC20Votes {
         uint256 amount
     ) internal override(ERC20) {
         if (from == address(0)) {
-            require(_totalSupply <= _maxCap, "ERC20Capped: cap exceeded");
+            // Chack if minting would exceed the cap based on the total supply and the minted amount
+            require(
+                totalSupply() + amount <= _maxCap,
+                "ERC20Capped: cap exceeded"
+            );
         }
         super._beforeTokenTransfer(from, to, amount);
     }
