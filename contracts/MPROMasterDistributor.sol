@@ -130,7 +130,7 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
      * It serves as a record of the cumulative tokens distributed and is often used to enforce
      * distribution limits or to check the available tokens for distribution.
      */
-    uint256 private distributedTokens = 0;
+    uint256 private distributedTokens;
 
     /**
      * @dev Private constant representing the initial daily distribution of tokens.
@@ -361,6 +361,9 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
             return 0;
         }
 
+        DistributionReduction[]
+            memory _distributionReductions = distributionReductions;
+
         uint256 totalDistribution = initialDaylyDistribution;
         // Time periods since last distribution
         uint256 timeElapsed = block.timestamp - distributionStartTimestamp;
@@ -368,17 +371,17 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
 
         uint256 reductionEndTimestamp = block.timestamp;
 
-        if (distributionReductions.length == 0) {
+        if (_distributionReductions.length == 0) {
             return totalDistribution + daysElapsed * initialDaylyDistribution;
         }
 
         for (
-            uint256 index = distributionReductions.length - 1;
+            uint256 index = _distributionReductions.length - 1;
             index >= 0;
             index--
         ) {
             DistributionReduction
-                memory distributionReduction = distributionReductions[index];
+                memory distributionReduction = _distributionReductions[index];
 
             // Check if the current timestamp is greater than the reduction timestamp
             if (block.timestamp >= distributionReduction.reductionTimestamp) {
@@ -403,9 +406,10 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
 
         totalDistribution += daysElapsed * initialDaylyDistribution;
 
-        return totalDistribution >= mproToken.maxCap()
-            ? mproToken.maxCap()
-            : totalDistribution;
+        return
+            totalDistribution >= mproToken.maxCap()
+                ? mproToken.maxCap()
+                : totalDistribution;
     }
 
     /**
