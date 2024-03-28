@@ -321,15 +321,15 @@ describe("MPROVesting", function () {
       expect(await mproVesting.connect(ben4).claimBalance()).to.equal(4000);
     });
 
-    it("Should update beneficiaries when called again (more tokens)", async function () {
+    it("Should not update beneficiaries when called again (more tokens)", async function () {
       await mproVesting
         .connect(deployer)
         .registerBeneficiaries([ben1.address], [1000]);
       expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
       await mproVesting
         .connect(deployer)
-        .registerBeneficiaries([ben1.address], [5000]);
-      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(5000);
+        .registerBeneficiaries([ben1.address], [1000]);
+      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
     });
 
     it("Should return error in register beneficiaries when called by non-owner", async function () {
@@ -429,15 +429,15 @@ describe("MPROVesting", function () {
       }
     });
 
-    it("Should update beneficiaries when called again (less tokens)", async function () {
+    it("Should not update beneficiaries when called again (less tokens)", async function () {
       await mproVesting
         .connect(deployer)
         .registerBeneficiaries([ben1.address], [5000]);
       expect(await mproVesting.connect(ben1).claimBalance()).to.equal(5000);
       await mproVesting
         .connect(deployer)
-        .registerBeneficiaries([ben1.address], [1000]);
-      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
+        .registerBeneficiaries([ben1.address], [5000]);
+      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(5000);
     });
 
     it("Should update beneficiaries when called again (the same number of tokens)", async function () {
@@ -451,7 +451,7 @@ describe("MPROVesting", function () {
       expect(await mproVesting.connect(ben1).claimBalance()).to.equal(5000);
     });
 
-    it("Should properly register and update beneficiaries after predefined deadline", async function () {
+    it("Should properly register and unable to update beneficiaries after predefined deadline", async function () {
       await network.provider.send("evm_increaseTime", [
         TGE_UNLOCK_DELAY + CLIFF_DELAY,
       ]);
@@ -463,10 +463,10 @@ describe("MPROVesting", function () {
       await mproVesting
         .connect(deployer)
         .registerBeneficiaries([ben1.address], [1000]);
-      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
+      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(5000);
     });
 
-    it("Should properly update beneficiary's amount to zero tokens", async function () {
+    it("Should not update beneficiary's amount to zero tokens", async function () {
       await mproVesting
         .connect(deployer)
         .registerBeneficiaries([ben1.address], [5000]);
@@ -474,9 +474,7 @@ describe("MPROVesting", function () {
       await mproVesting
         .connect(deployer)
         .registerBeneficiaries([ben1.address], [0]);
-      await expect(mproVesting.connect(ben1).claimBalance()).to.be.revertedWith(
-        "MPROVesting: Account is not a beneficiary"
-      );
+        expect(await mproVesting.connect(ben1).claimBalance()).to.equal(5000);
     });
 
     it("Should not delete previous beneficiaries when called again", async function () {
@@ -588,7 +586,7 @@ describe("MPROVesting", function () {
       await mproVesting
         .connect(deployer)
         .registerBeneficiaries([ben1.address], [6000]);
-      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(6000);
+      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(5000);
     });
 
     it("Should return the right number of tokens again after decresing registerBeneficiaries amount after TGE_UNLOCK_TIMESTAMP", async function () {
@@ -600,8 +598,8 @@ describe("MPROVesting", function () {
       expect(await mproVesting.connect(ben1).claimBalance()).to.equal(5000);
       await mproVesting
         .connect(deployer)
-        .registerBeneficiaries([ben1.address], [1000]);
-      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(1000);
+        .registerBeneficiaries([ben1.address], [5000]);
+      expect(await mproVesting.connect(ben1).claimBalance()).to.equal(5000);
     });
 
     it("Should return right number of tokens after predefined deadline", async function () {

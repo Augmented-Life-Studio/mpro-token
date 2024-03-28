@@ -188,19 +188,11 @@ contract MPROVesting is Context, Ownable {
             if (_beneficiaries[i] == address(0)) {
                 revert("Vesting: Invalid beneficiary");
             }
-            VestingBeneficiary storage beneficiary = vestingBeneficiaries[
+            VestingBeneficiary memory beneficiary = vestingBeneficiaries[
                 _beneficiaries[i]
             ];
             // Allow owner to reduce the amount of tokens for a beneficiary by registering beneficiary with a lower amount
-            if (beneficiary.amount > 0) {
-                // When the beneficiary already has claimed tokens, the new amount should be set as already claimed amount
-                if (beneficiary.claimed > _amounts[i]) {
-                    beneficiary.amount = beneficiary.claimed;
-                } else {
-                    // Otherwise, set the new amount
-                    beneficiary.amount = _amounts[i];
-                }
-            } else {
+            if (beneficiary.amount == 0) {
                 vestingBeneficiaries[_beneficiaries[i]] = VestingBeneficiary(
                     _amounts[i],
                     0
