@@ -374,14 +374,15 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         if (_distributionReductions.length == 0) {
             return totalDistribution + daysElapsed * initialDaylyDistribution;
         }
-
         for (
-            uint256 index = _distributionReductions.length - 1;
-            index >= 0;
+            uint256 index = _distributionReductions.length;
+            index > 0;
             index--
         ) {
             DistributionReduction
-                memory distributionReduction = _distributionReductions[index];
+                memory distributionReduction = _distributionReductions[
+                    index - 1
+                ];
 
             // Check if the current timestamp is greater than the reduction timestamp
             if (block.timestamp >= distributionReduction.reductionTimestamp) {
@@ -397,10 +398,6 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
                     .reductionTimestamp;
                 // Update daysElapsed for previous period
                 daysElapsed -= daysInCurrentPeriod;
-                // Check if we have reached the start of the distribution reduction
-                if (index == 0) {
-                    break;
-                }
             }
         }
 
