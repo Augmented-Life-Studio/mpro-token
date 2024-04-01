@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "hardhat/console.sol";
 
 interface IMPRO is IERC20 {
     function mint(address account, uint256 amount) external;
@@ -364,16 +365,13 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
         DistributionReduction[]
             memory _distributionReductions = distributionReductions;
 
-        uint256 totalDistribution = initialDaylyDistribution;
         // Time periods since last distribution
         uint256 timeElapsed = block.timestamp - distributionStartTimestamp;
+        // If days elapsed will return 0 and block.timestamp < distributionStartTimestamp we want to add initialDaylyDistribution to totalDistribution (step before loop with reductions)
         uint256 daysElapsed = timeElapsed / SECONDS_PER_DAY;
+        uint256 totalDistribution;
 
         uint256 reductionEndTimestamp = block.timestamp;
-
-        if (_distributionReductions.length == 0) {
-            return totalDistribution + daysElapsed * initialDaylyDistribution;
-        }
         for (
             uint256 index = _distributionReductions.length;
             index > 0;
@@ -390,6 +388,8 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
                 uint256 daysInCurrentPeriod = (reductionEndTimestamp -
                     distributionReduction.reductionTimestamp) / SECONDS_PER_DAY;
                 totalDistribution +=
+                    // for 1.01 day in distribution we need to add one daily distribution
+                    // For 0.1 days we will get daysInCurrentPeriod = 0, so we need to add already calculated part
                     distributionReduction.daylyDistribution +
                     (daysInCurrentPeriod *
                         distributionReduction.daylyDistribution);
@@ -400,8 +400,13 @@ contract MPROMasterDistributor is Context, AccessControl, Ownable {
                 daysElapsed -= daysInCurrentPeriod;
             }
         }
-
-        totalDistribution += daysElapsed * initialDaylyDistribution;
+        // When all reductions are calculated we need to add the rest of the days with the initialDaylyDistribution
+        // We want to calulate distribution from the first second of the distribution start timestamp
+        totalDistribution +=
+            initialDaylyDistribution +
+            // When days elapsed is 0 we need to add initialDaylyDistribution since distribution starts from the first second of the distributionStartTimestamp
+            daysElapsed *
+            initialDaylyDistribution;
 
         return
             totalDistribution >= mproToken.maxCap()
