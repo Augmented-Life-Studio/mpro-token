@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 pragma abicoder v2;
 
-import "@layerzerolabs/solidity-examples/contracts/lzApp/mocks/LZEndpointMock.sol";
+import "@layerzerolabs/test-devtools-evm-hardhat/contracts/mocks/EndpointV2Mock.sol";
 
 /*
 like a real LayerZero endpoint but can be mocked, which handle message transmission, verification, and receipt.
@@ -15,6 +15,6 @@ unlike a real LayerZero endpoint, it is
 - send() will short circuit to lzReceive()
 - no user application configuration
 */
-abstract contract LZMock is LZEndpointMock {
-
+contract LZMock is EndpointV2Mock {
+    constructor(uint32 _eid) EndpointV2Mock(_eid) {}
 }

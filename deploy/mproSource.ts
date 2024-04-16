@@ -29,15 +29,15 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     console.log("MPROMasterDistributor deployed to:", mproMasterDistributor.address);
 
-    await verifyContractWithRetry("contracts/MPROMasterDistributor.sol:MPROMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
+    // await verifyContractWithRetry("contracts/MPROMasterDistributor.sol:MPROMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
 
     const mproToken = await deploy("MPRO", {
         from: deployer,
         args: [
             TOKEN_NAME,
             TOKEN_SYMBOL,
-            [deployer], // Premint addresses
-            [ethers.parseEther("100")], // Premint values
+            [owner], // Premint addresses
+            [ethers.parseEther("1000000")], // Premint values
             lzEndpointAddress, // LayerZero Endpoint
             mproMasterDistributor.address,
             owner
@@ -50,7 +50,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     console.log("MPRO deployed to:", mproToken);
 
-    await verifyContractWithRetry("contracts/MPRO.sol:MPRO", mproToken.address, mproToken.args);
+    // await verifyContractWithRetry("contracts/MPRO.sol:MPRO", mproToken.address, mproToken.args);
 }
 
 module.exports.tags = ["MPROSource"]

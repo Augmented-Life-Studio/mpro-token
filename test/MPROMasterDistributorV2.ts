@@ -7,6 +7,7 @@ import { MPROMasterDistributor } from "../typechain-types/contracts/MPROMasterDi
 import { MPROMasterDistributor__factory } from "../typechain-types/factories/contracts/MPROMasterDistributor.sol";
 import { MPRO__factory } from "../typechain-types/factories/contracts/MPRO.sol";
 import { ZeroAddress } from "ethers";
+import { LZMock__factory } from "../typechain-types";
 
 // npx hardhat test test/MPROMasterDistributorV2.ts
 
@@ -93,6 +94,10 @@ describe("MPROMasterDistributor", () => {
       .connect(lister_role)
       .blocklist(blocklisted.address, true);
 
+      const LZMockFactory = await ethers.getContractFactory("contracts/mocks/LZEndpointMock.sol:LZMock") as LZMock__factory;
+      const lzMock = await LZMockFactory.deploy(1);
+      const lzMockAddress = await lzMock.getAddress();
+
     const MPRO: MPRO__factory = (await ethers.getContractFactory(
       "contracts/MPRO.sol:MPRO"
     )) as MPRO__factory;
@@ -101,7 +106,7 @@ describe("MPROMasterDistributor", () => {
       "MPRO",
       [vesting],
       [ethers.parseUnits("100")],
-      "0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1",
+      lzMockAddress,
       mproMasterDistributor.target,
       owner.address
     );

@@ -11,16 +11,22 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "dotenv": "^16.3.1",
-    "ethers": "^6.10.0",
+    "ethers": "6.1.0",
     "hardhat": "^2.19.4",
     "hardhat-deploy": "^0.11.45",
     "hardhat-deploy-ethers": "^0.4.1",
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@layerzerolabs/lz-evm-oapp-v2": "^2.0.11",
+    "@layerzerolabs/lz-evm-oapp-v2": "2.2.4",
+    "@layerzerolabs/lz-v2-utilities": "2.2.4",
     "@layerzerolabs/solidity-examples": "^1.1.0",
+    "@layerzerolabs/test-devtools-evm-hardhat": "^0.2.2",
+    "@layerzerolabs/toolbox-hardhat": "^0.2.13",
     "@nomiclabs/hardhat-web3": "^2.0.0",
-    "@openzeppelin/contracts": "^4.9.5"
+    "@openzeppelin/contracts": "^4.8.1"
+  },
+  "overrides": {
+    "@openzeppelin/contracts": "^4.8.1"
   }
 }

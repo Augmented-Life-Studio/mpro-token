@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.8;
+pragma solidity ^0.8.22;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@layerzerolabs/solidity-examples/contracts/token/oft/v2/OFTV2.sol";
+import "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 interface IMPROMasterDistributor {
@@ -25,7 +27,7 @@ interface IMPROMasterDistributor {
     ) external view returns (bool);
 }
 
-contract MPRO is OFTV2, ERC20Votes {
+contract MPRO is OFT, ERC20Votes {
     IMPROMasterDistributor private mproMasterDistributor;
 
     using SafeERC20 for IERC20;
@@ -85,7 +87,7 @@ contract MPRO is OFTV2, ERC20Votes {
         address _lzEndpoint,
         address _mproMasterDistributor,
         address _owner
-    ) OFTV2(_name, _symbol, 6, _lzEndpoint) ERC20Permit(_name) {
+    ) OFT(_name, _symbol, _lzEndpoint, _owner) ERC20Permit(_name) {
         for (uint256 i = 0; i < premintAddresses.length; i++) {
             _mint(premintAddresses[i], premintValues[i]);
         }

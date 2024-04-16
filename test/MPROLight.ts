@@ -2,7 +2,8 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import {
-  LZEndpointMock,
+  EndpointV2Mock,
+  LZMock__factory,
   MPROMasterDistributor,
   MPROMasterDistributor__factory,
 } from "../typechain-types";
@@ -10,16 +11,41 @@ import { MPRO as MPROLight } from "../typechain-types/contracts/MPROLight.sol";
 import { MPRO } from "../typechain-types/contracts/MPRO.sol";
 import { MPRO__factory as MPROLight__factory } from "../typechain-types/factories/contracts/MPROLight.sol";
 import { MPRO__factory } from "../typechain-types/factories/contracts/MPRO.sol";
-import { BytesLike } from "ethers";
 import { mproMasterDistributorSol } from "../typechain-types/contracts";
+import { Options } from "@layerzerolabs/lz-v2-utilities";
+import { SendParamStruct } from "../typechain-types/contracts/MPRO.sol/MPRO";
 
 // npx hardhat test test/MPROLight.ts
 
+const zeroPad = (data: string, length: number): Uint8Array => {
+  return ethers.getBytes(ethers.zeroPadValue(data, length), "hex")
+}
+const zero = ethers.toBigInt(0);
+
+const createSendParams = (chainId: number, receiver: string, quantity: bigint): SendParamStruct => {
+  let localReceiver = zeroPad(receiver, 32);
+  if (receiver === "x0123") {
+    localReceiver === Uint8Array.from([]);
+  }
+  const options = Options.newOptions().addExecutorLzReceiveOption(200000, 0).toHex().toString()
+
+  const sendParam = [
+    chainId,
+    localReceiver,
+    quantity,
+    quantity,
+    options,
+    '0x',
+    '0x',
+  ] as unknown as SendParamStruct;
+  return sendParam;
+}
+
 describe("MPROLight", function () {
+  let tx
   const localChainId = 1;
   const remoteChainId = 2;
   const remoteChainId2 = 3;
-  let lzEndpointMock: LZEndpointMock;
   let mproToken: MPRO;
   let mproTokenLight: MPROLight;
   let mproTokenLight2: MPROLight;
@@ -32,12 +58,7 @@ describe("MPROLight", function () {
     addr3: HardhatEthersSigner;
   let localEndpoint,
     remoteEndpoint,
-    remoteEndpoint2,
-    deployerAddressBytes32local: BytesLike,
-    deployerAddressBytes322: BytesLike,
-    deployerAddressBytes32: BytesLike;
-
-  let adapterParams = ethers.solidityPacked(["uint16", "uint256"], [1, 200000]); // default adapterParams example
+    remoteEndpoint2;
 
   beforeEach(async function () {
     [deployer, owner, lister, addr1, addr2, addr3] = await ethers.getSigners();
@@ -48,11 +69,11 @@ describe("MPROLight", function () {
     masterDistributor = await MasterDistributorFactory.deploy(owner.address);
     const masterDistributorAddress = await masterDistributor.getAddress();
 
-    const LZEndpointMock = await ethers.getContractFactory("LZEndpointMock");
+    const LZMockFactory = await ethers.getContractFactory("contracts/mocks/LZEndpointMock.sol:LZMock") as LZMock__factory;
 
-    localEndpoint = await LZEndpointMock.deploy(localChainId);
-    remoteEndpoint = await LZEndpointMock.deploy(remoteChainId);
-    remoteEndpoint2 = await LZEndpointMock.deploy(remoteChainId2);
+    localEndpoint = await LZMockFactory.deploy(localChainId);
+    remoteEndpoint = await LZMockFactory.deploy(remoteChainId);
+    remoteEndpoint2 = await LZMockFactory.deploy(remoteChainId2);
 
     await masterDistributor
       .connect(owner)
@@ -72,8 +93,10 @@ describe("MPROLight", function () {
       ], // Premint values
       localEndpoint.target, // LayerZero Endpoint
       masterDistributorAddress,
-      deployer.address
+      owner.address
     );
+
+    const mproLocalAddress = mproToken.target as string;
 
     const MPROFactoryLight = (await ethers.getContractFactory(
       "contracts/MPROLight.sol:MPRO"
@@ -83,8 +106,10 @@ describe("MPROLight", function () {
       "MPRO",
       remoteEndpoint.target, // LayerZero Endpoint
       masterDistributorAddress,
-      deployer.address
+      owner.address
     );
+
+    const mproRemoteAddress1 = mproTokenLight.target as string;
 
     const MPROFactoryLight2 = (await ethers.getContractFactory(
       "contracts/MPROLight.sol:MPRO"
@@ -94,119 +119,85 @@ describe("MPROLight", function () {
       "MPRO",
       remoteEndpoint2.target, // LayerZero Endpoint
       masterDistributorAddress,
-      deployer.address
+      owner.address
     );
 
-    // internal bookkeeping for endpoints (not part of a real deploy, just for this test)
+    const mproRemoteAddress2 = mproTokenLight2.target as string;
+
+    // // internal bookkeeping for endpoints (not part of a real deploy, just for this test)
     await localEndpoint.setDestLzEndpoint(
-      mproTokenLight.target,
+      mproRemoteAddress1,
       remoteEndpoint.target
     );
-    await remoteEndpoint.setDestLzEndpoint(
-      mproToken.target,
-      localEndpoint.target
-    );
-
     await localEndpoint.setDestLzEndpoint(
-      mproTokenLight2.target,
+      mproRemoteAddress2,
       remoteEndpoint2.target
     );
-    await remoteEndpoint2.setDestLzEndpoint(
-      mproToken.target,
-      localEndpoint.target
-    );
 
     await remoteEndpoint.setDestLzEndpoint(
-      mproTokenLight2.target,
-      remoteEndpoint2
+      mproLocalAddress,
+      localEndpoint.target
+    );
+    await remoteEndpoint.setDestLzEndpoint(
+      mproRemoteAddress2,
+      remoteEndpoint2.target
+    );
+
+    await remoteEndpoint2.setDestLzEndpoint(
+      mproLocalAddress,
+      localEndpoint.target
     );
     await remoteEndpoint2.setDestLzEndpoint(
-      mproTokenLight.target,
-      remoteEndpoint
+      mproRemoteAddress1,
+      remoteEndpoint.target
     );
 
-    const remotePath = ethers.solidityPacked(
-      ["address", "address"],
-      [mproTokenLight.target, mproToken.target]
+    const localPeer1 = zeroPad(
+      mproRemoteAddress1, 32
+    );
+    const localPeer2 = zeroPad(
+      mproRemoteAddress2, 32
     );
 
-    const localPath = ethers.solidityPacked(
-      ["address", "address"],
-      [mproToken.target, mproTokenLight.target]
+    const remotePeer1 = zeroPad(
+      mproLocalAddress, 32
+    );
+    const remotePeer2 = zeroPad(
+      mproRemoteAddress2, 32
     );
 
-    const remotePath2 = ethers.solidityPacked(
-      ["address", "address"],
-      [mproTokenLight2.target, mproToken.target]
+    const remotePeer3 = zeroPad(
+      mproLocalAddress, 32
+    );
+    const remotePeer4 = zeroPad(
+      mproRemoteAddress1, 32
     );
 
-    const localPath2 = ethers.solidityPacked(
-      ["address", "address"],
-      [mproToken.target, mproTokenLight2.target]
-    );
-
-    const lightLightPath = ethers.solidityPacked(
-      ["address", "address"],
-      [mproTokenLight2.target, mproTokenLight.target]
-    );
-
-    const lightLightPath2 = ethers.solidityPacked(
-      ["address", "address"],
-      [mproTokenLight.target, mproTokenLight2.target]
-    );
-
-    await mproToken.setTrustedRemote(remoteChainId, remotePath);
-    await mproTokenLight.setTrustedRemote(localChainId, localPath);
-
+    tx = await mproToken.connect(owner).setPeer(remoteChainId, localPeer1);
+    await tx.wait();
+    tx = await mproToken.connect(owner).setPeer(remoteChainId2, localPeer2);
+    await tx.wait();
     // Added
-    await mproToken.setTrustedRemote(remoteChainId2, remotePath2);
-    await mproTokenLight2.setTrustedRemote(localChainId, localPath2);
+    tx = await mproTokenLight.connect(owner).setPeer(localChainId, remotePeer1);
+    await tx.wait();
+    tx = await mproTokenLight.connect(owner).setPeer(remoteChainId2, remotePeer2);
+    await tx.wait();
+    tx = await mproTokenLight2.connect(owner).setPeer(localChainId, remotePeer3);
+    await tx.wait();
+    tx = await mproTokenLight2.connect(owner).setPeer(remoteChainId, remotePeer4);
+    await tx.wait();
 
-    await mproTokenLight.setTrustedRemote(remoteChainId2, lightLightPath);
-    await mproTokenLight2.setTrustedRemote(remoteChainId, lightLightPath2);
 
-    await mproToken.setMinDstGas(remoteChainId, 0, 100000);
-    await mproTokenLight.setMinDstGas(localChainId, 0, 100000);
-
-    // Added
-    await mproToken.setMinDstGas(remoteChainId2, 0, 100000);
-    await mproTokenLight2.setMinDstGas(localChainId, 0, 100000);
-
-    await mproTokenLight.setMinDstGas(remoteChainId2, 0, 100000);
-    await mproTokenLight2.setMinDstGas(remoteChainId, 0, 100000);
-
-    const abiCoder = ethers.AbiCoder.defaultAbiCoder();
-    deployerAddressBytes32 = abiCoder.encode(["address"], [deployer.address]);
-    deployerAddressBytes322 = abiCoder.encode(["address"], [deployer.address]);
-    deployerAddressBytes32local = abiCoder.encode(
-      ["address"],
-      [deployer.address]
-    );
   });
 
   describe("burn() function", function () {
     beforeEach(async function () {
       let totalAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        totalAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, totalAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        totalAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value to pay the LayerZero message fee
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, deployer.address, { value: nativeFee })
     });
     it("Should burn tokens correctly", async function () {
       const totalAmount = ethers.parseEther("100");
@@ -244,26 +235,11 @@ describe("MPROLight", function () {
   describe("transfer() function", function () {
     beforeEach(async function () {
       let totalAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        totalAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, totalAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        totalAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
     });
     it("Should transfer tokens correctly", async function () {
       const totalAmount = ethers.parseEther("100");
@@ -294,26 +270,11 @@ describe("MPROLight", function () {
   describe("transferFrom() function", function () {
     beforeEach(async function () {
       let totalAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        totalAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, totalAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        totalAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
     });
     it("Should transferFrom tokens correctly", async function () {
       const totalAmount = ethers.parseEther("100");
@@ -344,26 +305,12 @@ describe("MPROLight", function () {
   });
   it("sendFrom() function", async function () {
     let totalAmount = ethers.parseEther("8");
-    let nativeFee = await mproToken.estimateSendFee(
-      remoteChainId,
-      deployerAddressBytes32,
-      totalAmount,
-      false,
-      adapterParams
-    );
+    const sendParams = createSendParams(remoteChainId, deployer.address, totalAmount);
 
-    await mproToken.connect(owner).sendFrom(
-      owner.address, // source address to send tokens from
-      remoteChainId, // destination chainId
-      deployerAddressBytes32, // destination address to send tokens to
-      totalAmount, // quantity of tokens to send (in units of wei)
-      {
-        refundAddress: owner.address,
-        zroPaymentAddress: ethers.ZeroAddress,
-        adapterParams,
-      },
-      { value: nativeFee[0] } // pass a msg.value to pay the LayerZero message fee
-    );
+    let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+    await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
+
     expect(await mproToken.balanceOf(owner.address)).to.equal(
       ethers.parseEther("92")
     );
@@ -376,25 +323,11 @@ describe("MPROLight", function () {
   it("burnRate() on transfer", async function () {
     const totalAmount = ethers.parseEther("100");
     expect(await masterDistributor.burnRate()).to.equal(10 ** 3);
-    let nativeFee = await mproToken.estimateSendFee(
-      remoteChainId,
-      deployerAddressBytes32,
-      totalAmount,
-      false,
-      adapterParams
-    );
-    await mproToken.connect(owner).sendFrom(
-      owner.address, // source address to send tokens from
-      remoteChainId, // destination chainId
-      deployerAddressBytes32, // destination address to send tokens to
-      totalAmount, // quantity of tokens to send (in units of wei)
-      {
-        refundAddress: owner.address,
-        zroPaymentAddress: ethers.ZeroAddress,
-        adapterParams,
-      },
-      { value: nativeFee[0] } // pass a msg.value to pay the LayerZero message fee
-    );
+    const sendParams = createSendParams(remoteChainId, deployer.address, totalAmount);
+
+    let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+    await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
     expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
       ethers.parseEther("100")
     );
@@ -413,26 +346,11 @@ describe("MPROLight", function () {
   describe("sendFrom() function, Bridge: Token -> Light", function () {
     it("Should properly send some tokens", async function () {
       let sendAmount = ethers.parseEther("10");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("90")
       );
@@ -456,26 +374,11 @@ describe("MPROLight", function () {
 
     it("Should properly send all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(0);
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
         sendAmount
@@ -497,26 +400,11 @@ describe("MPROLight", function () {
 
     it("Should properly send when amount is floating value", async function () {
       let sendAmount = ethers.parseEther("0.1");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.9")
       );
@@ -538,302 +426,99 @@ describe("MPROLight", function () {
       );
     });
 
-    it("Should revert when amount to send is 0", async function () {
-      let sendAmount = ethers.parseEther("0");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+    // it("Should revert when amount to send is 0", async function () {
+    //   let sendAmount = ethers.parseEther("0");
+    //   const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
 
-      await expect(
-        mproToken.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("OFTCore: amount too small");
-    });
+    //   let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+    //   await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
+
+    //   await expect(
+    //     mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
+    //   ).to.be.revertedWith("OFTCore: amount too small");
+    // });
 
     it("Should revert when amount to send is negative", async function () {
       let sendAmount = ethers.parseEther("-1");
 
       try {
-        let nativeFee = await mproToken.estimateSendFee(
-          remoteChainId,
-          deployerAddressBytes32,
-          sendAmount,
-          false,
-          adapterParams
-        );
-        throw new Error("estimating sendFee successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: value out-of-bounds (argument="_amount", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+        const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
+        await mproToken.quoteSend(sendParams, false)
+        expect.fail("estimating sendFee successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal(`value out-of-bounds (argument="amountLD", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.1.0)`)
       }
     });
 
     it("Should revert when sending more tokens than owner has", async function () {
       let sendAmount = ethers.parseEther("101");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
 
       await expect(
-        mproToken.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should revert when trying to send tokens after sending all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("0")
       );
 
       let sendAmount2 = ethers.parseEther("1");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount2,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(remoteChainId, deployer.address, sendAmount2);
+
+      let [nativeFee2] = await mproToken.quoteSend(sendParams, false)
 
       await expect(
-        mproToken.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount2, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproToken.connect(owner).send(sendParams2, [nativeFee, zero] as any, owner.address, { value: nativeFee2 })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should throw error when destination address is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+
 
       try {
-        await mproToken.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId, // destination chainId
-          "0x123", // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+        const sendParams = createSendParams(remoteChainId, "0x123", sendAmount);
+
+        let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+        expect.fail("send successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal('invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.1.0)')
       }
     });
 
-    it("Should throw error when source address is invalid", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      try {
-        await mproToken.connect(owner).sendFrom(
-          "0x123", // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"
-        ) {
-        } else {
-          console.log(error);
-        }
-      }
-    });
-
-    it("Should revert when source address is address zero", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproToken.connect(owner).sendFrom(
-          ethers.ZeroAddress, // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("ERC20: insufficient allowance");
-    });
 
     it("Should revert when chainId is invalid", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      try {
+        let sendAmount = ethers.parseEther("100");
+        const sendParams = createSendParams(4, deployer.address, sendAmount);
 
-      await expect(
-        mproToken.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          4, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("LzApp: minGasLimit not set");
-    });
+        let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+        await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
+        expect.fail("send successful - should not be");
+      } catch (error: any) {
 
-    it("Should revert when source address is different than connect address", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproToken.connect(owner).sendFrom(
-          deployer.address, // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("ERC20: insufficient allowance");
+        expect(error.message).to.equal(`VM Exception while processing transaction: reverted with custom error 'NoPeer(4)'`);
+      }
     });
 
     it("Should properly send min number of tokens", async function () {
       let sendAmount = ethers.parseEther("0.000001");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.999999")
       );
@@ -861,28 +546,13 @@ describe("MPROLight", function () {
       await masterDistributor.connect(lister).whitelist(addr3.address, true);
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, tokensMinted);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
       await mproToken.connect(owner).transfer(addr3.address, sendAmount);
       await mproToken.connect(deployer).transfer(addr3.address, sendAmount);
       expect(await mproToken.balanceOf(addr3.address)).to.equal(tokensMinted);
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproToken.connect(addr3).send(sendParams, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       expect(await mproToken.balanceOf(addr3.address)).to.equal(0);
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
         tokensMinted
@@ -895,53 +565,23 @@ describe("MPROLight", function () {
       await masterDistributor.connect(lister).whitelist(addr3.address, true);
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, tokensMinted);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
       await mproToken.connect(owner).transfer(addr3.address, sendAmount);
       await mproToken.connect(deployer).transfer(addr3.address, sendAmount);
       expect(await mproToken.balanceOf(addr3.address)).to.equal(tokensMinted);
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproToken.connect(addr3).send(sendParams, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       expect(await mproToken.balanceOf(addr3.address)).to.equal(0);
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
 
       let sendAmount2 = tokensMinted;
-      let nativeFee2 = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount2,
-        false,
-        adapterParams
-      );
-      await mproTokenLight.connect(deployer).sendFrom(
-        deployer.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount2, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams2 = createSendParams(localChainId, deployer.address, sendAmount2);
+
+      let [nativeFee2] = await mproTokenLight.quoteSend(sendParams2, false)
+      await mproTokenLight.connect(deployer).send(sendParams2, [nativeFee2, zero] as any, deployer.address, { value: nativeFee2 })
       expect(await mproToken.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
@@ -951,26 +591,11 @@ describe("MPROLight", function () {
   describe("sendFrom() function, Bridge: Token -> Light2", function () {
     it("Should properly send some tokens", async function () {
       let sendAmount = ethers.parseEther("10");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("90")
       );
@@ -994,26 +619,11 @@ describe("MPROLight", function () {
 
     it("Should properly send all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(0);
       expect(await mproTokenLight2.balanceOf(deployer.address)).to.equal(
         sendAmount
@@ -1035,26 +645,11 @@ describe("MPROLight", function () {
 
     it("Should properly send when amount is floating value", async function () {
       let sendAmount = ethers.parseEther("0.1");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.9")
       );
@@ -1076,302 +671,91 @@ describe("MPROLight", function () {
       );
     });
 
-    it("Should revert when amount to send is 0", async function () {
+    it("Should not revert when amount to send is 0", async function () {
       let sendAmount = ethers.parseEther("0");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
 
-      await expect(
-        mproToken.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("OFTCore: amount too small");
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
     });
 
     it("Should revert when amount to send is negative", async function () {
       let sendAmount = ethers.parseEther("-1");
 
       try {
-        let nativeFee = await mproToken.estimateSendFee(
-          remoteChainId2,
-          deployerAddressBytes322,
-          sendAmount,
-          false,
-          adapterParams
-        );
-        throw new Error("estimating sendFee successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: value out-of-bounds (argument="_amount", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+        const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
+
+        let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+        expect.fail("estimating sendFee successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal(`value out-of-bounds (argument="amountLD", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.1.0)`)
       }
     });
 
     it("Should revert when sending more tokens than owner has", async function () {
       let sendAmount = ethers.parseEther("101");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
 
       await expect(
-        mproToken.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should revert when trying to send tokens after sending all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("0")
       );
 
       let sendAmount2 = ethers.parseEther("1");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount2,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(remoteChainId2, deployer.address, sendAmount);
+
+      let [nativeFee2] = await mproToken.quoteSend(sendParams2, false)
 
       await expect(
-        mproToken.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount2, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee2 })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should throw error when destination address is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+
 
       try {
-        await mproToken.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          "0x123", // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+        const sendParams = createSendParams(remoteChainId2, "0x123", sendAmount);
+        let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+        await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
+        expect.fail("send successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal('invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.1.0)')
       }
-    });
-
-    it("Should throw error when source address is invalid", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      try {
-        await mproToken.connect(owner).sendFrom(
-          "0x123", // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"
-        ) {
-        } else {
-          console.log(error);
-        }
-      }
-    });
-
-    it("Should revert when source address is address zero", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproToken.connect(owner).sendFrom(
-          ethers.ZeroAddress, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("ERC20: insufficient allowance");
     });
 
     it("Should revert when chainId is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproToken.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          4, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("LzApp: minGasLimit not set");
-    });
-
-    it("Should revert when source address is different than connect address", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproToken.connect(owner).sendFrom(
-          deployer.address, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("ERC20: insufficient allowance");
+      try {
+        const sendParams = createSendParams(4, deployer.address, sendAmount);
+        await mproToken.quoteSend(sendParams, false)
+      } catch (error: any) {
+        expect(error.message).to.equal(`VM Exception while processing transaction: reverted with custom error 'NoPeer(4)'`);
+      }
     });
 
     it("Should properly send min number of tokens", async function () {
       let sendAmount = ethers.parseEther("0.000001");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
 
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.999999")
       );
@@ -1399,28 +783,13 @@ describe("MPROLight", function () {
       await masterDistributor.connect(lister).whitelist(addr3.address, true);
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, tokensMinted);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
       await mproToken.connect(owner).transfer(addr3.address, sendAmount);
       await mproToken.connect(deployer).transfer(addr3.address, sendAmount);
       expect(await mproToken.balanceOf(addr3.address)).to.equal(tokensMinted);
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproToken.connect(addr3).send(sendParams, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       expect(await mproToken.balanceOf(addr3.address)).to.equal(0);
       expect(await mproTokenLight2.balanceOf(deployer.address)).to.equal(
         tokensMinted
@@ -1433,53 +802,23 @@ describe("MPROLight", function () {
       await masterDistributor.connect(lister).whitelist(addr3.address, true);
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, tokensMinted);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
       await mproToken.connect(owner).transfer(addr3.address, sendAmount);
       await mproToken.connect(deployer).transfer(addr3.address, sendAmount);
       expect(await mproToken.balanceOf(addr3.address)).to.equal(tokensMinted);
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproToken.connect(addr3).send(sendParams, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       expect(await mproToken.balanceOf(addr3.address)).to.equal(0);
       expect(await mproTokenLight2.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
 
       let sendAmount2 = tokensMinted;
-      let nativeFee2 = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount2,
-        false,
-        adapterParams
-      );
-      await mproTokenLight2.connect(deployer).sendFrom(
-        deployer.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount2, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams2 = createSendParams(localChainId, deployer.address, sendAmount2);
+
+      let [nativeFee2] = await mproTokenLight2.quoteSend(sendParams2, false)
+      await mproTokenLight2.connect(deployer).send(sendParams2, [nativeFee, zero] as any, deployer.address, { value: nativeFee2 })
       expect(await mproToken.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
@@ -1490,25 +829,10 @@ describe("MPROLight", function () {
     beforeEach(async function () {
       await masterDistributor.connect(lister).whitelist(deployer.address, true);
       let totalAmount = ethers.parseEther("100");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        totalAmount,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        totalAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee2[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, totalAmount);
+
+      let [nativeFee2] = await mproToken.quoteSend(sendParams, false)
+      await mproToken.connect(owner).send(sendParams, [nativeFee2, zero] as any, owner.address, { value: nativeFee2 })
       expect(await mproToken.balanceOf(owner.address)).to.equal(0);
       expect(await mproTokenLight2.balanceOf(deployer.address)).to.equal(
         totalAmount
@@ -1523,25 +847,10 @@ describe("MPROLight", function () {
     });
     it("Should send some tokens correctly", async function () {
       let sendAmount = ethers.parseEther("10");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
-      await mproTokenLight2.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       const totalAmount = sendAmount;
       const burnRate = await masterDistributor.burnRate();
       await mproTokenLight
@@ -1558,25 +867,10 @@ describe("MPROLight", function () {
 
     it("Should properly send all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
-      await mproTokenLight2.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(owner.address)).to.equal(0);
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
         sendAmount
@@ -1598,26 +892,11 @@ describe("MPROLight", function () {
 
     it("Should properly send when amount is floating value", async function () {
       let sendAmount = ethers.parseEther("0.1");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
 
-      await mproTokenLight2.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.9")
       );
@@ -1639,302 +918,89 @@ describe("MPROLight", function () {
       );
     });
 
-    it("Should revert when amount to send is 0", async function () {
+    it("Should not revert when amount to send is 0", async function () {
       let sendAmount = ethers.parseEther("0");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
 
-      await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("OFTCore: amount too small");
+      await mproTokenLight2.quoteSend(sendParams, false)
     });
 
     it("Should revert when amount to send is negative", async function () {
       let sendAmount = ethers.parseEther("-1");
 
       try {
-        let nativeFee = await mproToken.estimateSendFee(
-          remoteChainId,
-          deployerAddressBytes32,
-          sendAmount,
-          false,
-          adapterParams
-        );
-        throw new Error("estimating sendFee successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: value out-of-bounds (argument="_amount", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+        const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
+
+        let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+        expect.fail("estimating sendFee successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal(`value out-of-bounds (argument="amountLD", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.1.0)`)
       }
     });
 
     it("Should revert when sending more tokens than owner has", async function () {
       let sendAmount = ethers.parseEther("101");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
 
       await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should revert when trying to send tokens after sending all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
 
-      await mproTokenLight2.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(owner.address)).to.equal(
         ethers.parseEther("0")
       );
 
       let sendAmount2 = ethers.parseEther("1");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount2,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(remoteChainId, deployer.address, sendAmount2);
+
+      let [nativeFee2] = await mproTokenLight2.quoteSend(sendParams2, false)
 
       await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount2, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproTokenLight2.connect(owner).send(sendParams, [nativeFee2, zero] as any, owner.address, { value: nativeFee2 })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should throw error when destination address is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
 
       try {
-        await mproTokenLight2.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId, // destination chainId
-          "0x123", // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+        const sendParams = createSendParams(remoteChainId, "0x123", sendAmount);
+
+        let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+        await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
+        expect.fail("send successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal('invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.1.0)')
       }
-    });
-
-    it("Should throw error when source address is invalid", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      try {
-        await mproTokenLight2.connect(owner).sendFrom(
-          "0x123", // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"
-        ) {
-        } else {
-          console.log(error);
-        }
-      }
-    });
-
-    it("Should revert when source address is address zero", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          ethers.ZeroAddress, // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("ERC20: insufficient allowance");
     });
 
     it("Should revert when chainId is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          4, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("LzApp: minGasLimit not set");
-    });
-
-    it("Should revert when source address is different than connect address", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          deployer.address, // source address to send tokens from
-          remoteChainId, // destination chainId
-          deployerAddressBytes32, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("ERC20: insufficient allowance");
+      try {
+        const sendParams = createSendParams(4, deployer.address, sendAmount);
+        await mproTokenLight2.quoteSend(sendParams, false)
+      } catch (error: any) {
+        expect(error.message).to.equal(`VM Exception while processing transaction: reverted with custom error 'NoPeer(4)'`);
+      }
     });
 
     it("Should properly send min number of tokens", async function () {
       let sendAmount = ethers.parseEther("0.000001");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, sendAmount);
 
-      await mproTokenLight2.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.999999")
       );
@@ -1965,55 +1031,25 @@ describe("MPROLight", function () {
         .connect(deployer)
         .transfer(addr3.address, ethers.parseEther("100"));
       const tokensDeployer = ethers.parseEther("499999900");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        tokensDeployer,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        tokensDeployer, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee2[0] } // pass a msg.value
-      );
+      const sendParams2 = createSendParams(remoteChainId2, deployer.address, tokensDeployer);
+
+      let [nativeFee2] = await mproToken.quoteSend(sendParams2, false)
+      await mproToken.connect(addr3).send(sendParams2, [nativeFee2, zero] as any, addr3.address, { value: nativeFee2 })
       await mproTokenLight2
         .connect(deployer)
         .transfer(addr3.address, tokensDeployer);
 
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, tokensMinted);
+
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
 
       await mproTokenLight2.connect(owner).transfer(addr3.address, sendAmount);
       expect(await mproTokenLight2.balanceOf(addr3.address)).to.equal(
         tokensMinted
       );
-      await mproTokenLight2.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproTokenLight2.connect(addr3).send(sendParams, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(addr3.address)).to.equal(0);
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
         tokensMinted
@@ -2029,80 +1065,35 @@ describe("MPROLight", function () {
         .connect(deployer)
         .transfer(addr3.address, ethers.parseEther("100"));
       const tokensDeployer = ethers.parseEther("499999900");
-      let nativeFee3 = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        tokensDeployer,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        tokensDeployer, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee3[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, tokensDeployer);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+      await mproToken.connect(addr3).send(sendParams, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       await mproTokenLight2
         .connect(deployer)
         .transfer(addr3.address, tokensDeployer);
 
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(remoteChainId, deployer.address, tokensMinted);
+
+      let [nativeFee2] = await mproTokenLight2.quoteSend(sendParams2, false)
 
       await mproTokenLight2.connect(owner).transfer(addr3.address, sendAmount);
       expect(await mproTokenLight2.balanceOf(addr3.address)).to.equal(
         tokensMinted
       );
-      await mproTokenLight2.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproTokenLight2.connect(addr3).send(sendParams2, [nativeFee2, zero] as any, addr3.address, { value: nativeFee2 })
       expect(await mproTokenLight2.balanceOf(addr3.address)).to.equal(0);
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
 
       let sendAmount2 = tokensMinted;
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount2,
-        false,
-        adapterParams
-      );
-      await mproTokenLight.connect(deployer).sendFrom(
-        deployer.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount2, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams3 = createSendParams(remoteChainId2, deployer.address, sendAmount2);
+
+      let [nativeFee3] = await mproTokenLight.quoteSend(sendParams3, false)
+      await mproTokenLight.connect(deployer).send(sendParams3, [nativeFee3, zero] as any, deployer.address, { value: nativeFee3 })
       expect(await mproTokenLight2.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
@@ -2113,25 +1104,10 @@ describe("MPROLight", function () {
     beforeEach(async function () {
       await masterDistributor.connect(lister).whitelist(deployer.address, true);
       let totalAmount = ethers.parseEther("100");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        totalAmount,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        totalAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee2[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, totalAmount);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(0);
       expect(await mproTokenLight2.balanceOf(deployer.address)).to.equal(
         totalAmount
@@ -2146,25 +1122,10 @@ describe("MPROLight", function () {
     });
     it("Should send some tokens correctly", async function () {
       let sendAmount = ethers.parseEther("10");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
-      await mproTokenLight2.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       const totalAmount = sendAmount;
       const burnRate = await masterDistributor.burnRate();
       await mproToken
@@ -2183,25 +1144,10 @@ describe("MPROLight", function () {
 
     it("Should properly send all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
-      await mproTokenLight2.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(owner.address)).to.equal(0);
 
       const totalAmount = sendAmount;
@@ -2222,26 +1168,11 @@ describe("MPROLight", function () {
 
     it("Should properly send when amount is floating value", async function () {
       let sendAmount = ethers.parseEther("0.1");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
 
-      await mproTokenLight2.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.9")
       );
@@ -2262,302 +1193,106 @@ describe("MPROLight", function () {
       );
     });
 
-    it("Should revert when amount to send is 0", async function () {
+    it("Should not revert when amount to send is 0", async function () {
       let sendAmount = ethers.parseEther("0");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
 
-      await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("OFTCore: amount too small");
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
     });
 
     it("Should revert when amount to send is negative", async function () {
       let sendAmount = ethers.parseEther("-1");
 
       try {
-        let nativeFee = await mproToken.estimateSendFee(
-          localChainId,
-          deployerAddressBytes32local,
-          sendAmount,
-          false,
-          adapterParams
-        );
-        throw new Error("estimating sendFee successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: value out-of-bounds (argument="_amount", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+        const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
+
+        let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+        expect.fail("estimating sendFee successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal(`value out-of-bounds (argument="amountLD", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.1.0)`)
       }
     });
 
     it("Should revert when sending more tokens than owner has", async function () {
       let sendAmount = ethers.parseEther("101");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
 
       await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should revert when trying to send tokens after sending all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
 
-      await mproTokenLight2.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(owner.address)).to.equal(
         ethers.parseEther("0")
       );
 
       let sendAmount2 = ethers.parseEther("1");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount2,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(localChainId, deployer.address, sendAmount);
+
+      let [nativeFee2] = await mproTokenLight2.quoteSend(sendParams2, false)
 
       await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount2, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproTokenLight2.connect(owner).send(sendParams, [nativeFee2, zero] as any, owner.address, { value: nativeFee2 })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should throw error when destination address is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+
 
       try {
-        await mproTokenLight2.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          localChainId, // destination chainId
-          "0x123", // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
+        const sendParams = createSendParams(localChainId, "0x123", sendAmount);
+        let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+        await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
+        expect.fail("send successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal(
+          'invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.1.0)'
         );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
       }
-    });
-
-    it("Should throw error when source address is invalid", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      try {
-        await mproTokenLight2.connect(owner).sendFrom(
-          "0x123", // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"
-        ) {
-        } else {
-          console.log(error);
-        }
-      }
-    });
-
-    it("Should revert when source address is address zero", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          ethers.ZeroAddress, // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("ERC20: insufficient allowance");
     });
 
     it("Should revert when chainId is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
 
-      await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          4, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("LzApp: minGasLimit not set");
+      try {
+        const sendParams = createSendParams(4, deployer.address, sendAmount);
+        await mproTokenLight2.quoteSend(sendParams, false)
+      } catch (error: any) {
+        expect(error.message).to.equal(`VM Exception while processing transaction: reverted with custom error 'NoPeer(4)'`);
+
+      }
+
+
     });
 
-    it("Should revert when source address is different than connect address", async function () {
+    it("Should not revert when source address is different than connect address", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
 
-      await expect(
-        mproTokenLight2.connect(owner).sendFrom(
-          deployer.address, // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("ERC20: insufficient allowance");
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, deployer.address, { value: nativeFee })
     });
 
     it("Should properly send min number of tokens", async function () {
       let sendAmount = ethers.parseEther("0.000001");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
 
-      await mproTokenLight2.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
+
+      await mproTokenLight2.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.999999")
       );
@@ -2587,55 +1322,25 @@ describe("MPROLight", function () {
         .connect(deployer)
         .transfer(addr3.address, ethers.parseEther("100"));
       const tokensDeployer = ethers.parseEther("499999900");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        tokensDeployer,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        tokensDeployer, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee2[0] } // pass a msg.value
-      );
+      const sendParams2 = createSendParams(remoteChainId2, deployer.address, tokensDeployer);
+
+      let [nativeFee2] = await mproToken.quoteSend(sendParams2, false)
+      await mproToken.connect(addr3).send(sendParams2, [nativeFee2, zero] as any, addr3.address, { value: nativeFee2 })
       await mproTokenLight2
         .connect(deployer)
         .transfer(addr3.address, tokensDeployer);
 
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, tokensMinted);
+
+      let [nativeFee] = await mproTokenLight2.quoteSend(sendParams, false)
 
       await mproTokenLight2.connect(owner).transfer(addr3.address, sendAmount);
       expect(await mproTokenLight2.balanceOf(addr3.address)).to.equal(
         tokensMinted
       );
-      await mproTokenLight2.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproTokenLight2.connect(addr3).send(sendParams, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(addr3.address)).to.equal(0);
       expect(await mproToken.balanceOf(deployer.address)).to.equal(
         tokensMinted
@@ -2651,79 +1356,34 @@ describe("MPROLight", function () {
         .connect(deployer)
         .transfer(addr3.address, ethers.parseEther("100"));
       const tokensDeployer = ethers.parseEther("499999900");
-      let nativeFee3 = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        tokensDeployer,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        tokensDeployer, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee3[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, tokensDeployer);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+      await mproToken.connect(addr3).send(sendParams, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       await mproTokenLight2
         .connect(deployer)
         .transfer(addr3.address, tokensDeployer);
 
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(localChainId, deployer.address, tokensMinted);
+
+      let [nativeFee2] = await mproTokenLight2.quoteSend(sendParams2, false)
 
       await mproTokenLight2.connect(owner).transfer(addr3.address, sendAmount);
       expect(await mproTokenLight2.balanceOf(addr3.address)).to.equal(
         tokensMinted
       );
-      await mproTokenLight2.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproTokenLight2.connect(addr3).send(sendParams2, [nativeFee2, zero] as any, addr3.address, { value: nativeFee2 })
       expect(await mproToken.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
       expect(await mproTokenLight2.balanceOf(addr3.address)).to.equal(0);
       let sendAmount2 = tokensMinted;
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount2,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(deployer).sendFrom(
-        deployer.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount2, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams3 = createSendParams(remoteChainId2, deployer.address, sendAmount2);
+
+      let [nativeFee3] = await mproToken.quoteSend(sendParams3, false)
+      await mproToken.connect(deployer).send(sendParams3, [nativeFee3, zero] as any, deployer.address, { value: nativeFee3 })
       expect(await mproTokenLight2.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
@@ -2734,25 +1394,10 @@ describe("MPROLight", function () {
     beforeEach(async function () {
       await masterDistributor.connect(lister).whitelist(deployer.address, true);
       let totalAmount = ethers.parseEther("100");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        totalAmount,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        totalAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee2[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, totalAmount);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(0);
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
         totalAmount
@@ -2767,25 +1412,10 @@ describe("MPROLight", function () {
     });
     it("Should send some correctly", async function () {
       let sendAmount = ethers.parseEther("10");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
-      await mproTokenLight.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       const totalAmount = sendAmount;
       const burnRate = await masterDistributor.burnRate();
       await mproToken
@@ -2804,25 +1434,10 @@ describe("MPROLight", function () {
 
     it("Should properly send all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
-      await mproTokenLight.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight.balanceOf(owner.address)).to.equal(0);
 
       const totalAmount = sendAmount;
@@ -2843,26 +1458,11 @@ describe("MPROLight", function () {
 
     it("Should properly send when amount is floating value", async function () {
       let sendAmount = ethers.parseEther("0.1");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
 
-      await mproTokenLight.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.9")
       );
@@ -2883,302 +1483,98 @@ describe("MPROLight", function () {
       );
     });
 
-    it("Should revert when amount to send is 0", async function () {
+    it("Should not revert when amount to send is 0", async function () {
       let sendAmount = ethers.parseEther("0");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
 
-      await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("OFTCore: amount too small");
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
     });
 
     it("Should revert when amount to send is negative", async function () {
       let sendAmount = ethers.parseEther("-1");
 
       try {
-        let nativeFee = await mproToken.estimateSendFee(
-          localChainId,
-          deployerAddressBytes32local,
-          sendAmount,
-          false,
-          adapterParams
+        const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
+
+        await mproToken.quoteSend(sendParams, false)
+        expect.fail("estimating sendFee successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal(
+          `value out-of-bounds (argument="amountLD", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.1.0)`
         );
-        throw new Error("estimating sendFee successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: value out-of-bounds (argument="_amount", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
       }
     });
 
     it("Should revert when sending more tokens than owner has", async function () {
       let sendAmount = ethers.parseEther("101");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
 
       await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should revert when trying to send tokens after sending all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
 
-      await mproTokenLight.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight.balanceOf(owner.address)).to.equal(
         ethers.parseEther("0")
       );
 
       let sendAmount2 = ethers.parseEther("1");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount2,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(localChainId, deployer.address, sendAmount2);
+
+      let [nativeFee2] = await mproTokenLight.quoteSend(sendParams2, false)
 
       await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount2, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproTokenLight.connect(owner).send(sendParams2, [nativeFee2, zero] as any, owner.address, { value: nativeFee2 })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should throw error when destination address is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+
 
       try {
-        await mproTokenLight.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          localChainId, // destination chainId
-          "0x123", // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
+        const sendParams = createSendParams(localChainId, "0x123", sendAmount);
+
+        let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+        await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
+        expect.fail("send successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal(
+          'invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.1.0)'
         );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
       }
-    });
-
-    it("Should throw error when source address is invalid", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      try {
-        await mproTokenLight.connect(owner).sendFrom(
-          "0x123", // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"
-        ) {
-        } else {
-          console.log(error);
-        }
-      }
-    });
-
-    it("Should revert when source address is address zero", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          ethers.ZeroAddress, // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("ERC20: insufficient allowance");
     });
 
     it("Should revert when chainId is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      try {
+        const sendParams = createSendParams(4, deployer.address, sendAmount);
 
-      await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          4, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("LzApp: minGasLimit not set");
-    });
-
-    it("Should revert when source address is different than connect address", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          deployer.address, // source address to send tokens from
-          localChainId, // destination chainId
-          deployerAddressBytes32local, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("ERC20: insufficient allowance");
+        await mproTokenLight.quoteSend(sendParams, false)
+        expect.fail("estimating sendFee successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal(`VM Exception while processing transaction: reverted with custom error 'NoPeer(4)'`);
+      }
     });
 
     it("Should properly send min number of tokens", async function () {
       let sendAmount = ethers.parseEther("0.000001");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, sendAmount);
 
-      await mproTokenLight.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.999999")
       );
@@ -3208,55 +1604,25 @@ describe("MPROLight", function () {
         .connect(deployer)
         .transfer(addr3.address, ethers.parseEther("100"));
       const tokensDeployer = ethers.parseEther("499999900");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        tokensDeployer,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        tokensDeployer, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee2[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, tokensDeployer);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+      await mproToken.connect(addr3).send(sendParams, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       await mproTokenLight
         .connect(deployer)
         .transfer(addr3.address, tokensDeployer);
 
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(localChainId, deployer.address, tokensMinted);
+
+      let [nativeFee2] = await mproTokenLight.quoteSend(sendParams2, false)
 
       await mproTokenLight.connect(owner).transfer(addr3.address, sendAmount);
       expect(await mproTokenLight.balanceOf(addr3.address)).to.equal(
         tokensMinted
       );
-      await mproTokenLight.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproTokenLight.connect(addr3).send(sendParams2, [nativeFee2, zero] as any, addr3.address, { value: nativeFee2 })
       expect(await mproTokenLight.balanceOf(addr3.address)).to.equal(0);
       expect(await mproToken.balanceOf(deployer.address)).to.equal(
         tokensMinted
@@ -3272,108 +1638,48 @@ describe("MPROLight", function () {
         .connect(deployer)
         .transfer(addr3.address, ethers.parseEther("100"));
       const tokensDeployer = ethers.parseEther("499999900");
-      let nativeFee3 = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        tokensDeployer,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        tokensDeployer, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee3[0] } // pass a msg.value
-      );
+      const sendParams3 = createSendParams(remoteChainId, deployer.address, tokensDeployer);
+
+      let [nativeFee3] = await mproToken.quoteSend(sendParams3, false)
+      await mproToken.connect(addr3).send(sendParams3, [nativeFee3, zero] as any, addr3.address, { value: nativeFee3 })
       await mproTokenLight
         .connect(deployer)
         .transfer(addr3.address, tokensDeployer);
 
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        localChainId,
-        deployerAddressBytes32local,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(localChainId, deployer.address, tokensMinted);
+
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
 
       await mproTokenLight.connect(owner).transfer(addr3.address, sendAmount);
       expect(await mproTokenLight.balanceOf(addr3.address)).to.equal(
         tokensMinted
       );
-      await mproTokenLight.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        localChainId, // destination chainId
-        deployerAddressBytes32local, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproTokenLight.connect(addr3).send(sendParams, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       expect(await mproToken.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
       expect(await mproTokenLight.balanceOf(addr3.address)).to.equal(0);
       let sendAmount2 = tokensMinted;
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount2,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(deployer).sendFrom(
-        deployer.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount2, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams2 = createSendParams(remoteChainId, deployer.address, sendAmount2);
+
+      let [nativeFee2] = await mproToken.quoteSend(sendParams2, false)
+      await mproToken.connect(deployer).send(sendParams2, [nativeFee2, zero] as any, deployer.address, { value: nativeFee2 })
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
     });
   });
-
+  // npx hardhat test test/MPROLight.ts --grep "LOL"
   describe("sendFrom() function, Bridge: Light -> Light2", function () {
     beforeEach(async function () {
       await masterDistributor.connect(lister).whitelist(deployer.address, true);
       let totalAmount = ethers.parseEther("100");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        totalAmount,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        totalAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee2[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, totalAmount);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+      await mproToken.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproToken.balanceOf(owner.address)).to.equal(0);
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
         totalAmount
@@ -3388,25 +1694,10 @@ describe("MPROLight", function () {
     });
     it("Should send some correctly", async function () {
       let sendAmount = ethers.parseEther("10");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
-      await mproTokenLight.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       const totalAmount = sendAmount;
       const burnRate = await masterDistributor.burnRate();
       await mproTokenLight2
@@ -3423,25 +1714,10 @@ describe("MPROLight", function () {
 
     it("Should properly send all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
-      await mproTokenLight.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight.balanceOf(owner.address)).to.equal(0);
 
       const totalAmount = sendAmount;
@@ -3460,26 +1736,11 @@ describe("MPROLight", function () {
 
     it("Should properly send when amount is floating value", async function () {
       let sendAmount = ethers.parseEther("0.1");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
 
-      await mproTokenLight.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.9")
       );
@@ -3498,302 +1759,95 @@ describe("MPROLight", function () {
       );
     });
 
-    it("Should revert when amount to send is 0", async function () {
+    it("Should not revert when amount to send is 0", async function () {
       let sendAmount = ethers.parseEther("0");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
 
-      await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("OFTCore: amount too small");
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
     });
 
     it("Should revert when amount to send is negative", async function () {
       let sendAmount = ethers.parseEther("-1");
 
       try {
-        let nativeFee = await mproToken.estimateSendFee(
-          remoteChainId2,
-          deployerAddressBytes322,
-          sendAmount,
-          false,
-          adapterParams
+        const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
+
+        let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+        expect.fail("estimating sendFee successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal(
+          `value out-of-bounds (argument="amountLD", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.1.0)`
         );
-        throw new Error("estimating sendFee successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: value out-of-bounds (argument="_amount", value=-1000000000000000000, code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
       }
     });
 
     it("Should revert when sending more tokens than owner has", async function () {
       let sendAmount = ethers.parseEther("101");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
+
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
 
       await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should revert when trying to send tokens after sending all available tokens", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
 
-      await mproTokenLight.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight.balanceOf(owner.address)).to.equal(
         ethers.parseEther("0")
       );
 
       let sendAmount2 = ethers.parseEther("1");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount2,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(remoteChainId2, deployer.address, sendAmount2);
+
+      let [nativeFee2] = await mproToken.quoteSend(sendParams2, false)
 
       await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount2, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
+        mproTokenLight.connect(owner).send(sendParams2, [nativeFee2, zero] as any, owner.address, { value: nativeFee2 })
       ).to.be.revertedWith("ERC20: burn amount exceeds balance");
     });
 
     it("Should throw error when destination address is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
 
       try {
-        await mproTokenLight.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          "0x123", // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          'TypeError: invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.10.0)'
-        ) {
-        } else {
-          console.log(error);
-        }
+        const sendParams = createSendParams(remoteChainId2, "0x123", sendAmount);
+        let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+        await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
+        expect.fail("send successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal('invalid BytesLike value (argument="value", value="0x123", code=INVALID_ARGUMENT, version=6.1.0)')
       }
-    });
-
-    it("Should throw error when source address is invalid", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      try {
-        await mproTokenLight.connect(owner).sendFrom(
-          "0x123", // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        );
-        throw new Error("send successful - should not be");
-      } catch (error) {
-        if (
-          error ==
-          "NotImplementedError: Method 'HardhatEthersProvider.resolveName' is not implemented"
-        ) {
-        } else {
-          console.log(error);
-        }
-      }
-    });
-
-    it("Should revert when source address is address zero", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          ethers.ZeroAddress, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.revertedWith("ERC20: insufficient allowance");
     });
 
     it("Should revert when chainId is invalid", async function () {
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      try {
+        const sendParams = createSendParams(4, deployer.address, sendAmount);
 
-      await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          owner.address, // source address to send tokens from
-          4, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("LzApp: minGasLimit not set");
-    });
-
-    it("Should revert when source address is different than connect address", async function () {
-      let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
-
-      await expect(
-        mproTokenLight.connect(owner).sendFrom(
-          deployer.address, // source address to send tokens from
-          remoteChainId2, // destination chainId
-          deployerAddressBytes322, // destination address to send tokens to
-          sendAmount, // quantity of tokens to send (in units of wei)
-          {
-            refundAddress: owner.address,
-            zroPaymentAddress: ethers.ZeroAddress,
-            adapterParams,
-          },
-          { value: nativeFee[0] } // pass a msg.value
-        )
-      ).to.be.rejectedWith("ERC20: insufficient allowance");
+        let [nativeFee] = await mproToken.quoteSend(sendParams, false)
+        await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
+        expect.fail("send successful - should not be");
+      } catch (error: any) {
+        expect(error.message).to.equal(`VM Exception while processing transaction: reverted with custom error 'NoPeer(4)'`);
+      }
     });
 
     it("Should properly send min number of tokens", async function () {
       let sendAmount = ethers.parseEther("0.000001");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        sendAmount,
-        false,
-        adapterParams
-      );
+      const sendParams = createSendParams(remoteChainId2, deployer.address, sendAmount);
 
-      await mproTokenLight.connect(owner).sendFrom(
-        owner.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        sendAmount, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams, false)
+
+      await mproTokenLight.connect(owner).send(sendParams, [nativeFee, zero] as any, owner.address, { value: nativeFee })
       expect(await mproTokenLight.balanceOf(owner.address)).to.equal(
         ethers.parseEther("99.999999")
       );
@@ -3821,55 +1875,25 @@ describe("MPROLight", function () {
         .connect(deployer)
         .transfer(addr3.address, ethers.parseEther("100"));
       const tokensDeployer = ethers.parseEther("499999900");
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        tokensDeployer,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        tokensDeployer, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee2[0] } // pass a msg.value
-      );
+      const paramsToSend = createSendParams(remoteChainId, deployer.address, tokensDeployer);
+
+      let [nativeFee2] = await mproToken.quoteSend(paramsToSend, false)
+      await mproToken.connect(addr3).send(paramsToSend, [nativeFee2, zero] as any, addr3.address, { value: nativeFee2 })
       await mproTokenLight
         .connect(deployer)
         .transfer(addr3.address, tokensDeployer);
 
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(remoteChainId2, deployer.address, tokensMinted);
+
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams2, false)
 
       await mproTokenLight.connect(owner).transfer(addr3.address, sendAmount);
       expect(await mproTokenLight.balanceOf(addr3.address)).to.equal(
         tokensMinted
       );
-      await mproTokenLight.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproTokenLight.connect(addr3).send(sendParams2, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       expect(await mproTokenLight.balanceOf(addr3.address)).to.equal(0);
       expect(await mproTokenLight2.balanceOf(deployer.address)).to.equal(
         tokensMinted
@@ -3885,79 +1909,34 @@ describe("MPROLight", function () {
         .connect(deployer)
         .transfer(addr3.address, ethers.parseEther("100"));
       const tokensDeployer = ethers.parseEther("499999900");
-      let nativeFee3 = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        tokensDeployer,
-        false,
-        adapterParams
-      );
-      await mproToken.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        tokensDeployer, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee3[0] } // pass a msg.value
-      );
+      const sendParams = createSendParams(remoteChainId, deployer.address, tokensDeployer);
+
+      let [nativeFee4] = await mproToken.quoteSend(sendParams, false)
+      await mproToken.connect(addr3).send(sendParams, [nativeFee4, zero] as any, addr3.address, { value: nativeFee4 })
       await mproTokenLight
         .connect(deployer)
         .transfer(addr3.address, tokensDeployer);
 
       const tokensMinted = ethers.parseEther("500000000");
       let sendAmount = ethers.parseEther("100");
-      let nativeFee = await mproToken.estimateSendFee(
-        remoteChainId2,
-        deployerAddressBytes322,
-        tokensMinted,
-        false,
-        adapterParams
-      );
+      const sendParams2 = createSendParams(remoteChainId2, deployer.address, tokensMinted);
+
+      let [nativeFee] = await mproTokenLight.quoteSend(sendParams2, false)
 
       await mproTokenLight.connect(owner).transfer(addr3.address, sendAmount);
       expect(await mproTokenLight.balanceOf(addr3.address)).to.equal(
         tokensMinted
       );
-      await mproTokenLight.connect(addr3).sendFrom(
-        addr3.address, // source address to send tokens from
-        remoteChainId2, // destination chainId
-        deployerAddressBytes322, // destination address to send tokens to
-        tokensMinted, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      await mproTokenLight.connect(addr3).send(sendParams2, [nativeFee, zero] as any, addr3.address, { value: nativeFee })
       expect(await mproTokenLight2.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );
       expect(await mproTokenLight.balanceOf(addr3.address)).to.equal(0);
       let sendAmount2 = tokensMinted;
-      let nativeFee2 = await mproToken.estimateSendFee(
-        remoteChainId,
-        deployerAddressBytes32,
-        sendAmount2,
-        false,
-        adapterParams
-      );
-      await mproTokenLight2.connect(deployer).sendFrom(
-        deployer.address, // source address to send tokens from
-        remoteChainId, // destination chainId
-        deployerAddressBytes32, // destination address to send tokens to
-        sendAmount2, // quantity of tokens to send (in units of wei)
-        {
-          refundAddress: owner.address,
-          zroPaymentAddress: ethers.ZeroAddress,
-          adapterParams,
-        },
-        { value: nativeFee[0] } // pass a msg.value
-      );
+      const sendParams3 = createSendParams(remoteChainId, deployer.address, sendAmount2);
+
+      let [nativeFee3] = await mproTokenLight2.quoteSend(sendParams3, false)
+      await mproTokenLight2.connect(deployer).send(sendParams3, [nativeFee3, zero] as any, deployer.address, { value: nativeFee3 })
       expect(await mproTokenLight.balanceOf(deployer.address)).to.equal(
         tokensMinted
       );

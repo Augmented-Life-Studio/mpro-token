@@ -13,6 +13,7 @@ const {
 	bscscanApiKey,
 	polygonMumbaiApiKey,
 	ethApiKey,
+	arbiApiKey,
 } = require('./secrets.json')
 
 
@@ -45,12 +46,12 @@ const config: HardhatUserConfig = {
 		},
 		// Owner of the contract
 		owner: {
-			default: 1, // wallet address 1, of the mnemonic in .env
+			default: 1, // wallet address 0, of the mnemonic in .env
 		},
-		// Account used for tokens setting
-		helper: {
-			default: 2, // wallet address 3, of the mnemonic in .env
-		},
+		// Treasury address
+		treasury: {
+			default: 2
+		}
 	},
 	gasReporter: {
 		currency: 'USD',
@@ -64,7 +65,7 @@ const config: HardhatUserConfig = {
 	solidity: {
 		compilers: [
 			{
-				version: '0.8.20',
+				version: '0.8.22',
 				settings: {
 					optimizer: {
 						enabled: true,
@@ -125,11 +126,6 @@ const config: HardhatUserConfig = {
 			accounts: accounts("metis"),
 		},
 
-		goerli: {
-			url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", // public infura endpoint
-			chainId: 5,
-			accounts: accounts("goerli"),
-		},
 		"bsc-testnet": {
 			url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
 			chainId: 97,
@@ -145,12 +141,12 @@ const config: HardhatUserConfig = {
 			chainId: 80001,
 			accounts: accounts("mumbai"),
 		},
-		"arbitrum-goerli": {
+		"arbitrum-sepolia": {
 			url: `https://goerli-rollup.arbitrum.io/rpc/`,
 			chainId: 421613,
 			accounts: accounts("arbitrum-goerli"),
 		},
-		"optimism-goerli": {
+		"optimism-sepolia": {
 			url: `https://goerli.optimism.io/`,
 			chainId: 420,
 			accounts: accounts("optimism-goerli"),
@@ -172,6 +168,7 @@ const config: HardhatUserConfig = {
 			polygon: polygonMumbaiApiKey,
 			polygonMumbai: polygonMumbaiApiKey,
 			ethereum: ethApiKey,
+			arbitrum: arbiApiKey,
 		},
 	},
 };

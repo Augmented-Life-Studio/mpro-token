@@ -3,10 +3,17 @@ import { getDeploymentAddresses } from '../utils/readStatic'
 import { MPRO } from "../typechain-types"
 import { ethers } from 'ethers'
 
+const zeroPad = (data: string, length: number): Uint8Array => {
+	return ethers.getBytes(ethers.zeroPadValue(data, length), "hex")
+}
+
 module.exports = async function (taskArgs: any, hre: any) {
 	let localContract, remoteContract
-	const { helper } = hre.getNamedAccounts()
-	const helperSigner = await hre.ethers.getSigner(helper)
+	const { owner, deployer, treasury } = await hre.getNamedAccounts()
+
+	console.log(owner, deployer, treasury, "ownerownerownerownerownerownerownerownerownerowner");
+
+	const helperSigner = await hre.ethers.getSigner(owner)
 
 	if (taskArgs.contract) {
 		localContract = taskArgs.contract
@@ -15,6 +22,9 @@ module.exports = async function (taskArgs: any, hre: any) {
 		localContract = taskArgs.localContract
 		remoteContract = taskArgs.remoteContract
 	}
+
+	console.log('localContract:', localContract, helperSigner.address);
+
 
 	if (!localContract || !remoteContract) {
 		console.log(
@@ -34,38 +44,38 @@ module.exports = async function (taskArgs: any, hre: any) {
 	// get remote chain id
 	const remoteChainId = CHAIN_ID[taskArgs.targetNetwork as keyof typeof CHAIN_ID]
 
-	// concat remote and local address
-	let remoteAndLocal = ethers.solidityPacked(
-		['address', 'address'],
-		[remoteAddress, localContractInstance.target],
-	)
+	const peer = zeroPad(
+		remoteAddress, 32
+	);
 
 	// check if pathway is already set
-	const isTrustedRemoteSet = await localContractInstance.isTrustedRemote(
+	const isTrustedRemoteSet = await localContractInstance.isPeer(
 		remoteChainId,
-		remoteAndLocal,
+		peer,
 	)
 
 	if (!isTrustedRemoteSet) {
 		try {
-			let tx = await (
-				await localContractInstance.connect(helperSigner).setTrustedRemote(
-					remoteChainId,
-					remoteAndLocal,
-				)
-			).wait()
-			console.log(
-				`✅ [${hre.network.name}] setTrustedRemote(${remoteChainId}, ${remoteAndLocal})`,
+			let tx = await localContractInstance.connect(helperSigner).setPeer(
+				remoteChainId,
+				peer,
 			)
-			console.log(` tx: ${tx?.hash}`)
+
+			console.log(tx);
+
+			const transaction = await tx.getTransaction()
+			console.log(` tx: ${transaction?.hash}`)
 		} catch (e: any) {
+			console.log('====================================');
+			console.log(e);
+			console.log('====================================');
 			if (
 				e.error.message.includes('The chainId + address is already trusted')
 			) {
 				console.log('*source already set*')
 			} else {
 				console.log(
-					`❌ [${hre.network.name}] setTrustedRemote(${remoteChainId}, ${remoteAndLocal})`,
+					`❌ [${hre.network.name}] setPeer(${remoteChainId})`,
 				)
 			}
 		}
