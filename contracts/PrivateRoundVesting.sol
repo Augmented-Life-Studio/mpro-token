@@ -26,6 +26,12 @@ contract PrivateRoundVesting is Context, Ownable {
         uint256 claimed;
     }
 
+    struct VestingLookup {
+        address beneficiary;
+        uint256 amount;
+        uint256 claimed;
+    }
+
     /**
      * @dev The ERC20 token address which is being vested in this contract.
      */
@@ -374,18 +380,18 @@ contract PrivateRoundVesting is Context, Ownable {
         external
         view
         onlyOwner
-        returns (VestingBeneficiary[] memory)
+        returns (VestingLookup[] memory)
     {
         uint256 length = beneficiaryKeys.length;
 
-        VestingBeneficiary[] memory beneficiaries = new VestingBeneficiary[](
-            length
-        );
+        VestingLookup[] memory beneficiaries = new VestingLookup[](length);
 
         // Iterate over the array of keys and populate the arrays
         for (uint256 i = 0; i < length; i++) {
             address beneficiary = beneficiaryKeys[i];
-            beneficiaries[i] = vestingBeneficiaries[beneficiary];
+            uint256 amount = vestingBeneficiaries[beneficiary].amount;
+            uint256 claimed = vestingBeneficiaries[beneficiary].claimed;
+            beneficiaries[i] = VestingLookup(beneficiary, amount, claimed);
         }
 
         return beneficiaries;

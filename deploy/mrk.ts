@@ -37,7 +37,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     console.log(`MarketingVesting ${VESTING_CONTRACT_NAME} deployed to:`, vesting.address);
 
     const addrs = addresses.map((el: any) => el.Adress)
-    const amounts = addresses.map((el: any) => Number(el.Amount))
+    const amounts = addresses.map((el: any) => ethers.parseEther(el.Amount))
     const ves = await ethers.getContractAt(`${VESTING_CONTRACT_NAME}`, vesting.address);
 
     await ves.setVestingToken(MPRO_ADDRESS, { from: deployer })

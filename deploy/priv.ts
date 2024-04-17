@@ -33,10 +33,10 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
         skipIfAlreadyDeployed: true
     })
 
-    console.log(`PrivateRoundVesting ${VESTING_CONTRACT_NAME}  deployed to:`, vesting.address);
+    console.log(`PrivateRoundVesting ${VESTING_CONTRACT_NAME} deployed to:`, vesting.address);
 
     const addrs = addresses.map((el: any) => el.Adress)
-    const amounts = addresses.map((el: any) => Number(el.Amount))
+    const amounts = addresses.map((el: any) => ethers.parseEther(String(el.Amount)))
 
     const ves = await ethers.getContractAt(`${VESTING_CONTRACT_NAME}`, vesting.address);
 

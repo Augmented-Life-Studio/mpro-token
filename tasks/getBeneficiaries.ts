@@ -1,9 +1,9 @@
 import { MPROVesting } from '../typechain-types';
 
 module.exports = async function (taskArgs: any, hre: any) {
-    const { owner } = await hre.getNamedAccounts()
+    const { deployer } = await hre.getNamedAccounts()
 
-    const ownerSigner = await hre.ethers.getSigner(owner)
+    const ownerSigner = await hre.ethers.getSigner(deployer)
 
     let localContract
 
