@@ -90,3 +90,13 @@ npx hardhat --network arbitrum setPeer --target-network ethereum --local-contrac
 npx hardhat --network ethereum setMinDstGas --packet-type 0 --target-network arbitrum --contract MPRO --min-gas 100000
 npx hardhat --network arbitrum setMinDstGas --packet-type 0 --target-network ethereum --contract MPROLight --min-gas 100000
 ```
+
+<!-- VESTING DEPLOYMENT -->
+
+```shell
+npx hardhat --network ethereum deploy --tags VestingSeed
+npx hardhat --network ethereum deploy --tags PrivateRoundVesting
+npx hardhat --network ethereum deploy --tags FoundationVesting
+npx hardhat --network ethereum deploy --tags AdvisiorsVesting
+npx hardhat --network ethereum deploy --tags MarketingVesting
+```
