@@ -18,7 +18,6 @@ module.exports = async function (taskArgs: any, hre: any) {
 
     // get local contract
     const localContractInstance = await hre.ethers.getContract(localContract) as MPROVesting
-    // const remoteContractInstance = await hre.ethers.getContract(remoteContract) as MPRO
 
     try {
         const beneficiaries = await (
