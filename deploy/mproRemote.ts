@@ -2,10 +2,6 @@ import { LZ_ENDPOINTS } from "../constants/layerzeroEndpoints"
 import hre from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/dist/types";
 import { verifyContractWithRetry } from "../utils/verifyContract";
-import { MPROMasterDistributor } from "../typechain-types";
-
-// npx hardhat deploy --tags MPRORemote --network bsc
-// npx hardhat deploy --tags MPRORemote --network polygon
 
 module.exports = async function ({ deployments, getNamedAccounts }: {
     deployments: DeploymentsExtension, getNamedAccounts: any
@@ -29,7 +25,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     console.log("MPROMasterDistributor deployed to:", mproMasterDistributor.address);
 
-    // await verifyContractWithRetry("contracts/MPROMasterDistributorLight.sol:MPROMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
+    await verifyContractWithRetry("contracts/MPROMasterDistributorLight.sol:MPROMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
 
     const mproToken = await deploy("MPROLight", {
         from: deployer,
@@ -48,7 +44,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     console.log("MPRO deployed to:", mproToken);
 
-    // await verifyContractWithRetry("contracts/MPROLight.sol:MPRO", mproToken.address, mproToken.args);
+    await verifyContractWithRetry("contracts/MPROLight.sol:MPRO", mproToken.address, mproToken.args);
 }
 
 module.exports.tags = ["MPRORemote"]

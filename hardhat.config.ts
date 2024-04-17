@@ -46,11 +46,11 @@ const config: HardhatUserConfig = {
 		},
 		// Owner of the contract
 		owner: {
-			default: 1, // wallet address 0, of the mnemonic in .env
+			default: "0x03A1b656565E7c20aA4fadD4338f5Fa73585a62b", // wallet address 0, of the mnemonic in .env
 		},
 		// Treasury address
 		treasury: {
-			default: 2
+			default: "0x68E5CF81eb3c319e47006EAe067E04ebf6610204"
 		}
 	},
 	gasReporter: {

@@ -3,14 +3,13 @@ import { LZ_ENDPOINTS } from "../constants/layerzeroEndpoints"
 import hre from "hardhat";
 import { DeploymentsExtension } from "hardhat-deploy/dist/types";
 import { verifyContractWithRetry } from "../utils/verifyContract";
-import { MPROMasterDistributor } from "../typechain-types";
 
 // npx hardhat deploy --tags MPROSource --network ethereum
 
 module.exports = async function ({ deployments, getNamedAccounts }: {
     deployments: DeploymentsExtension, getNamedAccounts: any
 }) {
-    const { deployer, owner } = await getNamedAccounts()
+    const { deployer, owner, treasury } = await getNamedAccounts()
 
     const TOKEN_NAME = "MPRO";
     const TOKEN_SYMBOL = "MPRO";
@@ -29,14 +28,14 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     console.log("MPROMasterDistributor deployed to:", mproMasterDistributor.address);
 
-    // await verifyContractWithRetry("contracts/MPROMasterDistributor.sol:MPROMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
+    await verifyContractWithRetry("contracts/MPROMasterDistributor.sol:MPROMasterDistributor", mproMasterDistributor.address, mproMasterDistributor.args);
 
     const mproToken = await deploy("MPRO", {
         from: deployer,
         args: [
             TOKEN_NAME,
             TOKEN_SYMBOL,
-            [owner], // Premint addresses
+            [treasury], // Premint addresses
             [ethers.parseEther("1000000")], // Premint values
             lzEndpointAddress, // LayerZero Endpoint
             mproMasterDistributor.address,
@@ -50,7 +49,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     console.log("MPRO deployed to:", mproToken);
 
-    // await verifyContractWithRetry("contracts/MPRO.sol:MPRO", mproToken.address, mproToken.args);
+    await verifyContractWithRetry("contracts/MPRO.sol:MPRO", mproToken.address, mproToken.args);
 }
 
 module.exports.tags = ["MPROSource"]
