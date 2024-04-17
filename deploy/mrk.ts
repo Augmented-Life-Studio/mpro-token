@@ -15,7 +15,7 @@ const VESTING_PERIOD_DURATION = 2629743 // 1 month
 module.exports = async function ({ deployments, getNamedAccounts }: {
     deployments: DeploymentsExtension, getNamedAccounts: any
 }) {
-    const { deployer, owner } = await getNamedAccounts()
+    const { deployer } = await getNamedAccounts()
 
     const { deploy } = deployments
 
@@ -28,7 +28,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
             CLIFF_DELAY,
             VESTING_UNLOCK_PERCENT_PER_PERIOD,
             VESTING_PERIOD_DURATION,
-            owner
+            deployer
         ],
         log: true,
         waitConfirmations: 1,
@@ -44,7 +44,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     await ves.registerBeneficiaries(
         addrs,
         amounts,
-        { from: owner }
+        { from: deployer }
     )
 }
 
