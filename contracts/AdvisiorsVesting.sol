@@ -35,6 +35,10 @@ contract AdvisiorsVesting is Context, Ownable {
      */
     mapping(address => VestingBeneficiary) private vestingBeneficiaries;
     /**
+     * @dev Array of beneficiary addresses.
+     */
+    address[] private beneficiaryKeys;
+    /**
      * @dev The timestamp deadline after which the TGE unlock timestamp cannot be updated.
      */
     uint256 private immutable tgeUnlockTimestampDeadline;
@@ -205,6 +209,7 @@ contract AdvisiorsVesting is Context, Ownable {
                     _amounts[i],
                     0
                 );
+                beneficiaryKeys.push(_beneficiaries[i]);
             }
         }
         emit RegisterBeneficiaries(_beneficiaries, _amounts);
@@ -371,5 +376,26 @@ contract AdvisiorsVesting is Context, Ownable {
         uint256 _amount = IERC20(token).balanceOf(address(this));
         SafeERC20.safeTransfer(IERC20(token), _msgSender(), _amount);
         emit EmergencyWithdraw(_amount);
+    }
+
+    function getBeneficiaries()
+        external
+        view
+        onlyOwner
+        returns (VestingBeneficiary[] memory)
+    {
+        uint256 length = beneficiaryKeys.length;
+
+        VestingBeneficiary[] memory beneficiaries = new VestingBeneficiary[](
+            length
+        );
+
+        // Iterate over the array of keys and populate the arrays
+        for (uint256 i = 0; i < length; i++) {
+            address beneficiary = beneficiaryKeys[i];
+            beneficiaries[i] = vestingBeneficiaries[beneficiary];
+        }
+
+        return beneficiaries;
     }
 }

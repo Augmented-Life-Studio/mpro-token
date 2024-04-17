@@ -34,8 +34,6 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     })
 
     console.log(`PrivateRoundVesting ${VESTING_CONTRACT_NAME}  deployed to:`, vesting.address);
-
-    await verifyContractWithRetry(`contracts/${VESTING_CONTRACT_NAME}.sol:${VESTING_CONTRACT_NAME}`, vesting.address, vesting.args);
 }
 
 module.exports.tags = ["PrivateRoundVesting"]

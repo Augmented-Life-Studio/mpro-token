@@ -37,3 +37,9 @@ task(
 		'Name of remote contract if the names are different',
 	)
 	.addOptionalParam('contract', 'If both contracts are the same name')
+//
+task(
+	'getBeneficiaries',
+	'getting befeficiaries by owner',
+	require('./getBeneficiaries'),
+).addParam('contract', 'contract to get from')

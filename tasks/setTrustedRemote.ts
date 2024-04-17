@@ -9,9 +9,7 @@ const zeroPad = (data: string, length: number): Uint8Array => {
 
 module.exports = async function (taskArgs: any, hre: any) {
 	let localContract, remoteContract
-	const { owner, deployer, treasury } = await hre.getNamedAccounts()
-
-	console.log(owner, deployer, treasury, "ownerownerownerownerownerownerownerownerownerowner");
+	const { owner } = await hre.getNamedAccounts()
 
 	const helperSigner = await hre.ethers.getSigner(owner)
 

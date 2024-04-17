@@ -100,3 +100,13 @@ npx hardhat --network ethereum deploy --tags FoundationVesting
 npx hardhat --network ethereum deploy --tags AdvisiorsVesting
 npx hardhat --network ethereum deploy --tags MarketingVesting
 ```
+
+<!-- GETTING BENEFICIARIES -->
+
+```shell
+npx hardhat --network ethereum getBeneficiaries --contract VestingSeed
+npx hardhat --network ethereum getBeneficiaries --contract PrivateRoundVesting
+npx hardhat --network ethereum getBeneficiaries --contract FoundationVesting
+npx hardhat --network ethereum getBeneficiaries --contract AdvisiorsVesting
+npx hardhat --network ethereum getBeneficiaries --contract MarketingVesting
+```
