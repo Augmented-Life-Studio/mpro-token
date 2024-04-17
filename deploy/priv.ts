@@ -40,9 +40,9 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     const ves = await ethers.getContractAt(`${VESTING_CONTRACT_NAME}`, vesting.address);
 
-    ves.setVestingToken(MPRO_ADDRESS, { from: deployer })
+    await ves.setVestingToken(MPRO_ADDRESS, { from: deployer })
 
-    ves.registerBeneficiaries(
+    await ves.registerBeneficiaries(
         addrs,
         amounts,
         { from: deployer }
