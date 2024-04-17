@@ -1,6 +1,7 @@
 
 import { DeploymentsExtension } from "hardhat-deploy/dist/types";
-import { verifyContractWithRetry } from "../utils/verifyContract";
+import addresses from "../vestingAddresses/foundationBenaficiaries.json"
+import { ethers } from "hardhat";
 
 const VESTING_CONTRACT_NAME = "FoundationVesting"
 
@@ -35,6 +36,17 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     })
 
     console.log(`FoundationVesting ${VESTING_CONTRACT_NAME}  deployed to:`, vesting.address);
+
+    const addrs = addresses.map((el: any) => el.Adress)
+    const amounts = addresses.map((el: any) => Number(el.Amount))
+
+    const ves = await ethers.getContractAt(`${VESTING_CONTRACT_NAME}`, vesting.address);
+
+    await ves.registerBeneficiaries(
+        addrs,
+        amounts,
+        { from: owner }
+    )
 }
 
 module.exports.tags = ["FoundationVesting"]
