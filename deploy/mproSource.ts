@@ -36,7 +36,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
             TOKEN_NAME,
             TOKEN_SYMBOL,
             [treasury], // Premint addresses
-            [ethers.parseEther("1000000")], // Premint values
+            [ethers.parseEther("246880158")], // Premint values
             lzEndpointAddress, // LayerZero Endpoint
             mproMasterDistributor.address,
             owner
