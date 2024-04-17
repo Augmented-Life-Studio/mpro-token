@@ -21,7 +21,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
         from: deployer,
         args: [owner],
         log: true,
-        waitConfirmations: 1,
+        waitConfirmations: 5,
         skipIfAlreadyDeployed: true,
         contract: "contracts/MPROMasterDistributor.sol:MPROMasterDistributor"
     })

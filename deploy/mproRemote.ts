@@ -18,7 +18,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
         from: deployer,
         args: [owner],
         log: true,
-        waitConfirmations: 1,
+        waitConfirmations: 5,
         skipIfAlreadyDeployed: true,
         contract: "contracts/MPROMasterDistributorLight.sol:MPROMasterDistributor"
     })
@@ -37,7 +37,7 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
             owner
         ],
         log: true,
-        waitConfirmations: 1,
+        waitConfirmations: 5,
         skipIfAlreadyDeployed: true,
         contract: "contracts/MPROLight.sol:MPRO"
     })
