@@ -22,7 +22,6 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     const vesting = await deploy(VESTING_CONTRACT_NAME, {
         from: deployer,
         args: [
-            MPRO_ADDRESS,
             TGE_UNLOCK_TIMESTAMP,
             TGE_UNLOCK_PERCENT,
             CLIFF_DELAY,
@@ -41,6 +40,9 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
     const amounts = addresses.map((el: any) => Number(el.Amount))
 
     const ves = await ethers.getContractAt(`${VESTING_CONTRACT_NAME}`, vesting.address);
+
+    const tx = await ves.setVestingToken(MPRO_ADDRESS, { from: deployer })
+    tx.wait()
 
     await ves.registerBeneficiaries(
         addrs,
