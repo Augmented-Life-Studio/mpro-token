@@ -1,5 +1,5 @@
 import { DeploymentsExtension } from "hardhat-deploy/dist/types";
-import addresses from "../vestingAddresses/privateBenaficiaries.json"
+import missingAddresses from "../vestingAddresses/missingSeeds.json"
 import { ethers } from "hardhat";
 
 const VESTING_CONTRACT_NAME = "PrivateRoundVesting"
@@ -35,12 +35,12 @@ module.exports = async function ({ deployments, getNamedAccounts }: {
 
     console.log(`PrivateRoundVesting ${VESTING_CONTRACT_NAME} deployed to:`, vesting.address);
 
-    const addrs = addresses.map((el: any) => el.Adress)
-    const amounts = addresses.map((el: any) => ethers.parseEther(String(el.Amount)))
+    const addrs = missingAddresses.map((el: any) => el.Wallet)
+    const amounts = missingAddresses.map((el: any) => ethers.parseEther(String(el.Amount)))
 
     const ves = await ethers.getContractAt(`${VESTING_CONTRACT_NAME}`, vesting.address);
 
-    await ves.setVestingToken(MPRO_ADDRESS, { from: deployer })
+    // await ves.setVestingToken(MPRO_ADDRESS, { from: deployer })
 
     await ves.registerBeneficiaries(
         addrs,

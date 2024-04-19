@@ -131,7 +131,11 @@ const config: HardhatUserConfig = {
 			chainId: 1088,
 			accounts: accounts("metis"),
 		},
-
+		sepolia: {
+			url: `https://sepolia.drpc.org`,
+			chainId: 11155111,
+			accounts: accounts("sepolia"),
+		},
 		"bsc-testnet": {
 			url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
 			chainId: 97,
