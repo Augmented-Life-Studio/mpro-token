@@ -109,4 +109,3 @@ npx hardhat --network ethereum getBeneficiaries --contract PrivateRoundVesting
 npx hardhat --network ethereum getBeneficiaries --contract FoundationVesting
 npx hardhat --network ethereum getBeneficiaries --contract AdvisiorsVesting
 npx hardhat --network ethereum getBeneficiaries --contract MarketingVesting
-```

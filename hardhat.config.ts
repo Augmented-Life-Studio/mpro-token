@@ -167,7 +167,7 @@ const config: HardhatUserConfig = {
 			bsc: bscscanApiKey,
 			polygon: polygonMumbaiApiKey,
 			polygonMumbai: polygonMumbaiApiKey,
-			ethereum: ethApiKey,
+			mainnet: ethApiKey,
 			arbitrum: arbiApiKey,
 		},
 	},
