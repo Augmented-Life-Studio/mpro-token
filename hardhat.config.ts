@@ -14,6 +14,7 @@ const {
 	polygonMumbaiApiKey,
 	ethApiKey,
 	arbiApiKey,
+	baseApiKey
 } = require('./secrets.json')
 
 
@@ -173,7 +174,8 @@ const config: HardhatUserConfig = {
 			polygon: polygonMumbaiApiKey,
 			polygonMumbai: polygonMumbaiApiKey,
 			mainnet: ethApiKey,
-			arbitrum: arbiApiKey,
+			arbitrumOne: arbiApiKey,
+			base: baseApiKey,
 		},
 	},
 };
