@@ -40,7 +40,7 @@ contract MPROReward is Ownable, AccessControl {
         uint256 _rewardAmountInRewardToken,
         uint256 _addRewardTxCostInRewardToken,
         address _claimer
-    ) public onlyOwner {
+    ) public onlyRole(MPRO_MASTER_DISTRIBUTOR_ROLE) {
         Reward memory reward = userRewards[_claimer];
         require(
             reward._lastRewardTimestamp + 1 days < block.timestamp,
@@ -101,5 +101,12 @@ contract MPROReward is Ownable, AccessControl {
         address _claimer
     ) public view returns (Claim[] memory) {
         return userClaimHistory[_claimer];
+    }
+
+    function grantRole(
+        bytes32 _role,
+        address _account
+    ) public virtual override onlyOwner {
+        _grantRole(_role, _account);
     }
 }
