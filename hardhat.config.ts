@@ -90,6 +90,11 @@ const config: HardhatUserConfig = {
 			chainId: 1,
 			accounts: accounts("ethereum"),
 		},
+		base: {
+			url: "https://base.llamarpc.com",
+			chainId: 8453,
+			accounts: accounts("base"),
+		},
 		bsc: {
 			url: "https://bsc-dataseed1.binance.org",
 			chainId: 56,

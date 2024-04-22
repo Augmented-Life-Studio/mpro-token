@@ -59,7 +59,7 @@ npx hardhat --network base setPeer --target-network arbitrum --local-contract MP
 4. Send tokens from one chain to another.
 
 ```shell
-npx hardhat --network ethereum oftSendTokens --target-network bsc --qty 1 --local-contract MPRO --remote-contract MPROLight --from-address 0x --to-address 0x
+npx hardhat --network base oftSendTokens --target-network arbitrum --qty 1 --local-contract MPRO --remote-contract MPROLight --from-address 0x --to-address 0x
 npx hardhat --network ethereum oftSendTokens --target-network polygon --qty 1 --local-contract MPRO --remote-contract MPROLight --from-address 0x --to-address 0x
 npx hardhat --network ethereum oftSendTokens --target-network arbitrum --qty 1 --local-contract MPRO --remote-contract MPROLight --from-address 0x --to-address 0x
 
@@ -89,6 +89,7 @@ Short contracts description:
 ```shell
 npx hardhat --network ethereum deploy --tags MPROSource
 npx hardhat --network arbitrum deploy --tags MPRORemote
+npx hardhat --network base deploy --tags MPRORemote
 npx hardhat --network base deploy --tags MPRORemote
 ```
 ```shell
