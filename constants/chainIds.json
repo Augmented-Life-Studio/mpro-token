@@ -1,5 +1,6 @@
 {
   "ethereum": 30101,
+  "base": 30184,
   "bsc": 30102,
   "avalanche": 30106,
   "polygon": 30109,
@@ -8,6 +9,8 @@
   "fantom": 30112,
   "polygon-zkevm": 30158,
   "testnets": "testnets",
+  "sepolia": 40161,
+  "base-sepolia": 40245,
   "bsc-testnet": 40102,
   "fuji": 40106,
   "mumbai": 40109,

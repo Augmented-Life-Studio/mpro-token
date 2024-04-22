@@ -23,6 +23,7 @@ IMPORTANT: helper needs to be the owner of the token contracts, so that it can s
 
 ```shell
 npx hardhat --network ethereum deploy --tags MPROSource
+npx hardhat --network base deploy --tags MPRORemote
 npx hardhat --network arbitrum deploy --tags MPRORemote
 npx hardhat --network bsc deploy --tags MPRORemote
 npx hardhat --network polygon deploy --tags MPRORemote
@@ -34,6 +35,7 @@ npx hardhat --network polygon deploy --tags MPRORemote
 npx hardhat --network ethereum setPeer --target-network arbitrum --local-contract MPRO --remote-contract MPROLight
 npx hardhat --network ethereum setPeer --target-network bsc --local-contract MPRO --remote-contract MPROLight
 npx hardhat --network ethereum setPeer --target-network polygon --local-contract MPRO --remote-contract MPROLight
+npx hardhat --network ethereum setPeer --target-network base --local-contract MPRO --remote-contract MPROLight
 
 npx hardhat --network bsc setPeer --target-network ethereum --local-contract MPROLight --remote-contract MPRO
 npx hardhat --network bsc setPeer --target-network arbitrum --local-contract MPROLight --remote-contract MPROLight
@@ -46,6 +48,12 @@ npx hardhat --network polygon setPeer --target-network bsc --local-contract MPRO
 npx hardhat --network arbitrum setPeer --target-network ethereum --local-contract MPROLight --remote-contract MPRO
 npx hardhat --network arbitrum setPeer --target-network polygon --local-contract MPROLight --remote-contract MPROLight
 npx hardhat --network arbitrum setPeer --target-network bsc --local-contract MPROLight --remote-contract MPROLight
+npx hardhat --network arbitrum setPeer --target-network base --local-contract MPROLight --remote-contract MPROLight
+
+npx hardhat --network base setPeer --target-network ethereum --local-contract MPROLight --remote-contract MPRO
+npx hardhat --network base setPeer --target-network polygon --local-contract MPROLight --remote-contract MPROLight
+npx hardhat --network base setPeer --target-network bsc --local-contract MPROLight --remote-contract MPROLight
+npx hardhat --network base setPeer --target-network arbitrum --local-contract MPROLight --remote-contract MPROLight
 ```
 
 4. Send tokens from one chain to another.
@@ -81,16 +89,13 @@ Short contracts description:
 ```shell
 npx hardhat --network ethereum deploy --tags MPROSource
 npx hardhat --network arbitrum deploy --tags MPRORemote
+npx hardhat --network base deploy --tags MPRORemote
 ```
 ```shell
 npx hardhat --network ethereum setPeer --target-network arbitrum --local-contract MPRO --remote-contract MPROLight
 npx hardhat --network arbitrum setPeer --target-network ethereum --local-contract MPROLight --remote-contract MPRO
+npx hardhat --network base setPeer --target-network ethereum --local-contract MPROLight --remote-contract MPRO
 ```
-```shell
-npx hardhat --network ethereum setMinDstGas --packet-type 0 --target-network arbitrum --contract MPRO --min-gas 100000
-npx hardhat --network arbitrum setMinDstGas --packet-type 0 --target-network ethereum --contract MPROLight --min-gas 100000
-```
-
 <!-- VESTING DEPLOYMENT -->
 
 ```shell
