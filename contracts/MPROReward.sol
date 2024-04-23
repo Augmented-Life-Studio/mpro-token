@@ -4,10 +4,23 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "hardhat/console.sol";
+
+interface Router {
+    function WETH() external pure returns (address);
+    function getAmountsOut(
+        uint amountIn,
+        address[] memory path
+    ) external pure returns (uint[] memory amounts);
+}
 
 contract MPROReward is Ownable, AccessControl {
     bytes32 public constant MPRO_MASTER_DISTRIBUTOR_ROLE =
         keccak256("MPRO_MASTER_DISTRIBUTOR_ROLE");
+
+    uint256 private oneUSDT = 1000000; // 1 USDT = 1000000 wei
+
+    address public usdtAddress; // USDT address
 
     struct Reward {
         uint256 _rewardToClaim;
@@ -21,18 +34,33 @@ contract MPROReward is Ownable, AccessControl {
         uint256 _claimTimestamp;
     }
 
-    mapping(address => Reward) private userRewards;
+    mapping(address => Reward) private walletRewards;
 
     mapping(address => Claim[]) private userClaimHistory;
 
-    uint256 private tokenBalanceForReward;
+    address public rewardTokenAddress;
 
-    address claimTokenAddress;
+    Router private router; // Router contract (Uniswap)
 
     ERC20 claimToken;
 
-    constructor(address _initialOwner, address _claimTokenAddress) {
-        claimTokenAddress = _claimTokenAddress;
+    event AddReward(
+        address indexed claimer,
+        uint256 rewardAmount,
+        uint256 transactionCostManual,
+        uint256 transactionCostAuto
+    );
+
+    constructor(
+        address _rewardTokenAddress,
+        address _usdtAddress,
+        address _routerAddress,
+        address _initialOwner
+    ) {
+        rewardTokenAddress = _rewardTokenAddress;
+        usdtAddress = _usdtAddress;
+        claimToken = ERC20(_rewardTokenAddress);
+        router = Router(_routerAddress);
         _transferOwnership(_initialOwner);
     }
 
@@ -41,19 +69,26 @@ contract MPROReward is Ownable, AccessControl {
         uint256 _addRewardTxCostInRewardToken,
         address _claimer
     ) public onlyRole(MPRO_MASTER_DISTRIBUTOR_ROLE) {
-        Reward memory reward = userRewards[_claimer];
+        uint256 gasBefore = gasleft();
+        require(
+            _rewardAmountInRewardToken > 0,
+            "Reward amount must be greater than 0"
+        );
+        console.log(_rewardAmountInRewardToken, _addRewardTxCostInRewardToken);
+        require(
+            _rewardAmountInRewardToken > _addRewardTxCostInRewardToken,
+            "Reward amount must be greater than transaction cost"
+        );
+        Reward memory reward = walletRewards[_claimer];
         require(
             reward._lastRewardTimestamp + 1 days < block.timestamp,
             "You can claim reward once a day"
         );
 
-        uint256 rewardTokenBalance = ERC20(claimTokenAddress).balanceOf(
-            address(this)
-        );
+        uint256 rewardTokenBalance = claimToken.balanceOf(address(this));
 
         require(
-            rewardTokenBalance >=
-                _rewardAmountInRewardToken + _rewardAmountInRewardToken,
+            rewardTokenBalance >= _rewardAmountInRewardToken,
             "Not enough reward token balance"
         );
 
@@ -62,23 +97,39 @@ contract MPROReward is Ownable, AccessControl {
         currentRewardToClaim +=
             _rewardAmountInRewardToken -
             _addRewardTxCostInRewardToken;
-        userRewards[msg.sender] = Reward({
+
+        walletRewards[msg.sender] = Reward({
             _rewardToClaim: currentRewardToClaim,
             _claimedReward: reward._claimedReward,
             _lastRewardTimestamp: reward._lastRewardTimestamp
         });
 
-        tokenBalanceForReward += _rewardAmountInRewardToken;
+        uint256 gasUsed = gasBefore - gasleft();
+        uint256 txCost = gasUsed * tx.gasprice;
+        uint256 transactionCostInRewardToken = getNativeValueInMPRO(txCost);
+        console.log(
+            tx.gasprice,
+            txCost,
+            "txCosttxCosttxCosttxCosttxCosttxCosttxCost"
+        );
+        if (transactionCostInRewardToken >= _addRewardTxCostInRewardToken)
+            revert("Transaction cost is not enough");
+        emit AddReward(
+            _claimer,
+            _rewardAmountInRewardToken,
+            _addRewardTxCostInRewardToken,
+            transactionCostInRewardToken
+        );
     }
 
     function claimReward(address _claimer) public {
-        Reward storage reward = userRewards[_claimer];
+        Reward storage reward = walletRewards[_claimer];
         require(reward._rewardToClaim > 0, "No reward to claim");
         uint256 rewardToClaim = reward._rewardToClaim;
 
-        ERC20(claimTokenAddress).transferFrom(
-            _claimer,
+        ERC20(rewardTokenAddress).transferFrom(
             address(this),
+            _claimer,
             rewardToClaim
         );
 
@@ -93,8 +144,10 @@ contract MPROReward is Ownable, AccessControl {
                 _claimTimestamp: block.timestamp
             })
         );
+    }
 
-        tokenBalanceForReward -= rewardToClaim;
+    function getReward(address _claimer) public view returns (Reward memory) {
+        return walletRewards[_claimer];
     }
 
     function getClaimHistory(
@@ -108,5 +161,17 @@ contract MPROReward is Ownable, AccessControl {
         address _account
     ) public virtual override onlyOwner {
         _grantRole(_role, _account);
+    }
+
+    function getNativeValueInMPRO(
+        uint256 _amount
+    ) public view returns (uint256) {
+        address wethAddress = router.WETH(); // Get the WETH address
+        address[] memory path = new address[](2);
+        path[0] = rewardTokenAddress;
+        path[1] = wethAddress; // USDT to WETH
+
+        uint[] memory amounts = router.getAmountsOut(_amount, path);
+        return amounts[path.length - 1];
     }
 }
