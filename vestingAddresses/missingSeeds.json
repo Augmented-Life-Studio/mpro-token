@@ -1,38 +1,10 @@
 [
     {
-        "Wallet": "0x05780BD0563bAeA527595b140A7dc2f67e1a4d85",
-        "Amount": "7575"
+        "Wallet": "0xcD3F2FE752c14E046c8113C97d4469453C798301",
+        "Amount": "505000"
     },
     {
-        "Wallet": "0x1a097D9d17Eb48F5B97ca99d1Ca70914FFc58ce2",
-        "Amount": "10100"
-    },
-    {
-        "Wallet": "0x8A79076D243b6D5c3cB4C9C7343c3478c8cf1028",
-        "Amount": "2525"
-    },
-    {
-        "Wallet": "0x082A98452A9344AD2976ab07824F12F08CB587e7",
-        "Amount": "2525"
-    },
-    {
-        "Wallet": "0xFDEe0D4fFAE09a60837018D2FdE08B5B9DF975D6",
-        "Amount": "5050"
-    },
-    {
-        "Wallet": "0x1d1A63A21f7385d8caD9f6006f53A4b2B5B8f6c6",
-        "Amount": "7575"
-    },
-    {
-        "Wallet": "0xA9c5dd596a0c92fc447e2eDC2DBE03129Aaa0de3",
-        "Amount": "6060"
-    },
-    {
-        "Wallet": "0x99894373362a6448A3386F7f2520AFD3A1Cb5fE9",
-        "Amount": "7575"
-    },
-    {
-        "Wallet": "0x4F4722d77c2fcA5620E12255A68b03C18CD9fc43",
-        "Amount": "353500"
+        "Wallet": "0xC25733fC9d73E91018b7e84939872ce6aDAC9f90",
+        "Amount": "252500"
     }
 ]
