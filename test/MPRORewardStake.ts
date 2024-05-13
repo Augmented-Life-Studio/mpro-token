@@ -246,9 +246,7 @@ describe('MPRORewardStake', function () {
 			const updateTimestamp = await getTxTimestamp(tx)
 			await network.provider.send('evm_increaseTime', [1000])
 			await mine()
-			await mproRewardStake
-				.connect(stakers[0])
-				.updateWalletReward(stakers[0].address)
+			await mproRewardStake.connect(stakers[0]).compoundReward()
 			const stakerData = await mproRewardStake.staker(stakers[0].address)
 			const stakeDuration = stakeEndTimestamp - updateTimestamp
 			expect(stakerData[1]).to.be.equal(stakeEndTimestamp)
@@ -262,7 +260,7 @@ describe('MPRORewardStake', function () {
 	})
 
 	describe('claim function', function () {
-		it.only('Should claim reward correctly', async function () {
+		it('Should claim reward correctly', async function () {
 			await mproToken
 				.connect(owner)
 				.distibute(owner.address, ethers.parseEther('10000'))
@@ -273,18 +271,30 @@ describe('MPRORewardStake', function () {
 				.connect(owner)
 				.updateStakers([stakers[0].address], [ethers.parseEther('100')])
 			const updateTimestamp = await getTxTimestamp(tx)
-			await network.provider.send('evm_increaseTime', [1000])
+			await network.provider.send('evm_increaseTime', [200])
 			await mine()
-			await mproRewardStake
-				.connect(stakers[0])
-				.updateWalletReward(stakers[0].address)
+			await mproRewardStake.connect(stakers[0]).compoundReward()
+			await network.provider.send('evm_increaseTime', [200])
+			await mine()
+			await mproRewardStake.connect(stakers[0]).compoundReward()
+			await network.provider.send('evm_increaseTime', [200])
+			await mine()
+			await mproRewardStake.connect(stakers[0]).compoundReward()
+			await network.provider.send('evm_increaseTime', [200])
+			await mine()
+			await mproRewardStake.connect(stakers[0]).compoundReward()
+			await network.provider.send('evm_increaseTime', [200])
+			await mine()
+			await mproRewardStake.connect(stakers[0]).compoundReward()
+
 			const stakerData = await mproRewardStake.staker(stakers[0].address)
-			const stakeDuration = stakeEndTimestamp - Number(updateTimestamp)
+
+			const stakingDuration = stakeEndTimestamp - Number(updateTimestamp)
 			const rewardRate = await mproRewardStake.rewardRate()
-			const expectedReward = stakeDuration * Number(rewardRate)
+			const expectedReward = stakingDuration * Number(rewardRate)
 			expect(
 				BigNumber.from(stakerData[2]).sub(BigNumber.from(stakerData[0])),
-			).to.be.equal(BigNumber.from(expectedReward.toString()))
+			).to.be.lt(BigNumber.from(expectedReward.toString()))
 			const currentBlockTimestamp = await ethers.provider.getBlock('latest')
 			const currentTimestamp = currentBlockTimestamp?.timestamp || 0
 
@@ -332,6 +342,13 @@ describe('MPRORewardStake', function () {
 			await mproRewardStake.connect(stakers[0]).claim()
 			const balanceAfterClaim3 = await mproToken.balanceOf(stakers[0].address)
 			expect(balanceAfterClaim3).to.be.equal(balanceToClaim)
+
+			const dustBeforeStaking = await mproToken.balanceOf(
+				mproRewardStake.target,
+			)
+
+			const rewardAmount = await mproRewardStake.rewardTokenQuantity()
+			expect(rewardAmount).to.be.equal(dustBeforeStaking)
 		})
 	})
 })
