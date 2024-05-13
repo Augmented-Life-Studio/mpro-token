@@ -68,9 +68,11 @@ contract MPRORewardStake is Ownable {
     ) public onlyOwner {
         require(_stakers.length == _amounts.length, "Invalid input");
         // Counting amount to update including pending rewards
-        uint256 updateAmount = 0;
+        uint256 stakedAmountToUpdate = 0;
         // Counting amount to transfer based on stakers amount
-        uint256 totalAmount = 0;
+        uint256 totalAmountToUpdate = 0;
+        // Total rewards to be paid out
+        uint256 rewardedAmountToUpdate = 0;
         for (uint256 i = 0; i < _stakers.length; i++) {
             Staker storage _staker = staker[_stakers[i]];
             // Skip new stakers if declaration period is over
@@ -86,38 +88,48 @@ contract MPRORewardStake is Ownable {
                     stakersLength++;
                 }
                 // Get pending reward from staked amount
-                uint256 rewardFromLastUpdateAt = updateWalletReward(
+                uint256 rewardFromLastUpdateAt = compoundWalletReward(
                     _stakers[i]
                 );
                 // Update staked amount
                 _staker.staked += _amounts[i];
                 // Update total amount to transfer
-                totalAmount += _amounts[i];
+                totalAmountToUpdate += _amounts[i];
                 // Amount that will be available to claim including compounded rewards
-                updateAmount += _amounts[i] + rewardFromLastUpdateAt;
+                stakedAmountToUpdate += _amounts[i] + rewardFromLastUpdateAt;
                 // Update balance to claim
                 _staker.balanceToClaim += _amounts[i];
+                // Update reward
+                rewardedAmountToUpdate += rewardFromLastUpdateAt;
             }
         }
         // Send required tokens to the contract address
-        mproToken.transferFrom(msg.sender, address(this), totalAmount);
+        mproToken.transferFrom(msg.sender, address(this), totalAmountToUpdate);
         // Update total staked supply increased by pending rewards
-        totalStakedSupply += updateAmount;
+        rewardTokenQuantity -= rewardedAmountToUpdate;
+        totalStakedSupply += stakedAmountToUpdate;
     }
 
     function lastTimeRewardApplicable() public view returns (uint256) {
         return _min(stakeEndTimestamp, block.timestamp);
     }
 
-    function updateWalletReward(address _account) public returns (uint256) {
+    function compoundWalletReward(address _account) private returns (uint256) {
         Staker storage _staker = staker[_account];
-        _staker.reward += pendingReward(_account);
-        uint256 pending = _staker.reward;
-        rewardTokenQuantity -= _staker.reward;
-        _staker.balanceToClaim += _staker.reward;
+        uint256 rewardToUpdate = pendingReward(_account);
+        _staker.balanceToClaim += rewardToUpdate;
         _staker.lastUpdated = _min(block.timestamp, stakeEndTimestamp);
-        _staker.reward = 0;
-        return pending;
+        return rewardToUpdate;
+    }
+
+    function compoundReward() public {
+        Staker storage _staker = staker[_msgSender()];
+        require(_staker.staked > 0, "MPRORewardStake: No staked amount");
+        uint256 rewardToUpdate = pendingReward(_msgSender());
+        _staker.balanceToClaim += rewardToUpdate;
+        _staker.lastUpdated = _min(block.timestamp, stakeEndTimestamp);
+        rewardTokenQuantity -= rewardToUpdate;
+        totalStakedSupply += rewardToUpdate;
     }
 
     function pendingReward(address _account) public view returns (uint256) {
