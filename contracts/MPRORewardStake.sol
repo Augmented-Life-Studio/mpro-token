@@ -11,6 +11,14 @@ contract MPRORewardStake is Ownable {
 
     IERC20 public immutable mproToken;
 
+    struct Staker {
+        uint256 staked;
+        uint256 lastUpdated;
+        uint256 balanceToClaim;
+        uint256 claimedBalance;
+        uint256 reward;
+    }
+
     // Start of staking period
     uint256 public stakeStartTimestamp;
     // End of staking period
@@ -22,30 +30,15 @@ contract MPRORewardStake is Ownable {
     uint256 public declarationStartTimestamp;
     // End timestamp of the declaration period (disable to add new wallets to the staking pool)
     uint256 public declarationEndTimestamp;
-
-    // Sum of (reward rate * dt * 1e18 / total staked supply)
-    uint256 public rewardPerTokenStored;
     // Quantity of reward token to be paid out
     uint256 public rewardTokenQuantity;
-
     // Total staked
     uint256 public totalStakedSupply;
-    // User address => staked amount
-    mapping(address => uint256) public staked;
-    // User address => staked amount
-    mapping(address => uint256) public walletLastUpdated;
-    // User address => claimable amount
-    mapping(address => uint256) public balanceToClaim;
-    // User address => claimable amount
-    mapping(address => uint256) public claimedBalance;
-    // User address => rewards to be claimed
-    mapping(address => uint256) public rewards;
+
+    // Stakers
+    mapping(address => Staker) public staker;
     // Stakers length
     uint256 public stakersLength;
-
-    address public nextStakeAddress;
-
-    NextStake public nextStake;
 
     // Claim reward config
     uint256 public claimRewardStartTimestamp;
@@ -65,20 +58,8 @@ contract MPRORewardStake is Ownable {
         stakeStartTimestamp = _stakeStartTimestamp;
         stakeEndTimestamp = _stakeEndTimestamp;
         declarationEndTimestamp = _declarationEndTimestamp;
+        claimRewardStartTimestamp = _stakeEndTimestamp;
         _transferOwnership(_newOwner);
-    }
-
-    function getMultiplierForTimestamp(
-        uint256 _from,
-        uint256 _to
-    ) public view returns (uint256) {
-        if (_to <= stakeEndTimestamp) {
-            return _to.sub(_from);
-        } else if (_from >= stakeEndTimestamp) {
-            return 0;
-        } else {
-            return stakeEndTimestamp.sub(_from);
-        }
     }
 
     function updateStakers(
@@ -86,24 +67,41 @@ contract MPRORewardStake is Ownable {
         uint256[] memory _amounts
     ) public onlyOwner {
         require(_stakers.length == _amounts.length, "Invalid input");
+        // Counting amount to update including pending rewards
         uint256 updateAmount = 0;
+        // Counting amount to transfer based on stakers amount
+        uint256 totalAmount = 0;
         for (uint256 i = 0; i < _stakers.length; i++) {
+            Staker storage _staker = staker[_stakers[i]];
+            // Skip new stakers if declaration period is over
             if (
-                staked[_stakers[i]] == 0 &&
+                _staker.staked == 0 &&
                 block.timestamp < declarationEndTimestamp &&
                 block.timestamp > declarationEndTimestamp
             ) {
                 return;
             } else {
-                if (staked[_stakers[i]] == 0) {
+                // Increase stakers length if new staker
+                if (_staker.staked == 0) {
                     stakersLength++;
                 }
-                uint256 pending = updateWalletReward(_stakers[i]);
-                staked[_stakers[i]] += _amounts[i];
-                balanceToClaim[_stakers[i]] += _amounts[i];
-                updateAmount += _amounts[i] + pending;
+                // Get pending reward from staked amount
+                uint256 rewardFromLastUpdateAt = updateWalletReward(
+                    _stakers[i]
+                );
+                // Update staked amount
+                _staker.staked += _amounts[i];
+                // Update total amount to transfer
+                totalAmount += _amounts[i];
+                // Amount that will be available to claim including compounded rewards
+                updateAmount += _amounts[i] + rewardFromLastUpdateAt;
+                // Update balance to claim
+                _staker.balanceToClaim += _amounts[i];
             }
         }
+        // Send required tokens to the contract address
+        mproToken.transferFrom(msg.sender, address(this), totalAmount);
+        // Update total staked supply increased by pending rewards
         totalStakedSupply += updateAmount;
     }
 
@@ -112,22 +110,24 @@ contract MPRORewardStake is Ownable {
     }
 
     function updateWalletReward(address _account) public returns (uint256) {
-        rewards[_account] += pendingReward(_account);
-        uint256 pending = rewards[_account];
-        rewardTokenQuantity -= rewards[_account];
-        balanceToClaim[_account] += rewards[_account];
-        walletLastUpdated[_account] = _min(block.timestamp, stakeEndTimestamp);
-        rewards[_account] = 0;
+        Staker storage _staker = staker[_account];
+        _staker.reward += pendingReward(_account);
+        uint256 pending = _staker.reward;
+        rewardTokenQuantity -= _staker.reward;
+        _staker.balanceToClaim += _staker.reward;
+        _staker.lastUpdated = _min(block.timestamp, stakeEndTimestamp);
+        _staker.reward = 0;
         return pending;
     }
 
     function pendingReward(address _account) public view returns (uint256) {
-        if (walletLastUpdated[_account] == 0) {
+        Staker memory _staker = staker[_account];
+        if (_staker.lastUpdated == 0) {
             return 0;
         }
-        uint256 currentBalance = balanceToClaim[_account];
+        uint256 currentBalance = _staker.balanceToClaim;
         uint256 pendingRewardPerToken = rewardPerTokenFromTimestamp(
-            walletLastUpdated[_account]
+            _staker.lastUpdated
         );
         return (currentBalance * (pendingRewardPerToken)) / 1e18;
     }
@@ -138,9 +138,7 @@ contract MPRORewardStake is Ownable {
         if (totalStakedSupply == 0) {
             return rewardTokenQuantity;
         }
-
-        uint256 stakingPeriod = _min(block.timestamp, stakeEndTimestamp) -
-            _updatedTimestamp;
+        uint256 stakingPeriod = lastTimeRewardApplicable() - _updatedTimestamp;
         return ((rewardRate * stakingPeriod) * 1e18) / totalStakedSupply;
     }
 
@@ -149,7 +147,11 @@ contract MPRORewardStake is Ownable {
     }
 
     function getStakedAmount(address _account) public view returns (uint256) {
-        return staked[_account];
+        return staker[_account].staked;
+    }
+
+    function getEarnedAmount(address _account) public view returns (uint256) {
+        return staker[_account].reward;
     }
 
     function updateReward(uint256 _amount) public onlyOwner {
@@ -158,15 +160,7 @@ contract MPRORewardStake is Ownable {
         rewardRate = rewardTokenQuantity / stakeDuration();
     }
 
-    function earned(address _account) public view returns (uint256) {
-        return rewards[_account];
-    }
-
-    function _min(uint256 x, uint256 y) private pure returns (uint256) {
-        return x <= y ? x : y;
-    }
-
-    function moveToStake() public {
+    function moveToStake(address _stakeAddress) public {
         require(
             block.timestamp >= claimRewardStartTimestamp,
             "MPRORewardStake: Not yet unlocked"
@@ -176,9 +170,9 @@ contract MPRORewardStake is Ownable {
             tokensEnableForRelease > 0,
             "MPRORewardStake: No tokens to release"
         );
-
-        claimedBalance[_msgSender()] += tokensEnableForRelease;
-        mproToken.transfer(_msgSender(), tokensEnableForRelease);
+        Staker storage _staker = staker[_msgSender()];
+        _staker.claimedBalance += tokensEnableForRelease;
+        NextStake(_stakeAddress).transferStake(tokensEnableForRelease);
     }
 
     function claim() external virtual {
@@ -186,46 +180,79 @@ contract MPRORewardStake is Ownable {
             block.timestamp >= claimRewardStartTimestamp,
             "MPRORewardStake: Not yet unlocked"
         );
+        Staker storage _staker = staker[_msgSender()];
         uint256 tokensEnableForRelease = enableForRelease();
         require(
             tokensEnableForRelease > 0,
-            "MPRORewardStake: No tokens to release"
+            "MPRORewardStake: No tokens to claim"
         );
-
-        claimedBalance[_msgSender()] += tokensEnableForRelease;
-        nextStake.transferStake(tokensEnableForRelease);
+        require(
+            _staker.balanceToClaim - _staker.claimedBalance >=
+                tokensEnableForRelease,
+            "MPRORewardStake: Not enough tokens to claim"
+        );
+        _staker.claimedBalance += tokensEnableForRelease;
+        console.log(
+            tokensEnableForRelease,
+            "tokensEnableForReleasetokensEnableForRelease"
+        );
+        mproToken.transfer(_msgSender(), tokensEnableForRelease);
     }
 
     function enableForRelease() public view returns (uint256) {
-        uint256 totalTokens = balanceToClaim[_msgSender()];
+        Staker memory _staker = staker[_msgSender()];
         if (block.timestamp >= claimRewardStartTimestamp) {
             if (
                 claimPeriodDuration > 0 && rewardUnlockPercentPerPeriod < 10000
             ) {
-                uint256 claimingCicles = block
+                uint256 currentCycle = block
                     .timestamp
                     .sub(claimRewardStartTimestamp)
                     .div(claimPeriodDuration);
+
+                // Calculate percent to claim
                 uint256 percentToClaim = rewardUnlockPercentPerPeriod.mul(
-                    claimingCicles
+                    currentCycle
                 );
-                uint256 claimableTokens = totalTokens.mul(percentToClaim).div(
-                    UNLOCK_PERCENT_DIVIDER
-                );
-                if (claimableTokens > balanceToClaim[_msgSender()]) {
-                    return balanceToClaim[_msgSender()];
+
+                // For instance balance to claim = 100, percent per period = 50, claimed balance = 0
+                uint256 claimableTokens = _staker
+                    .balanceToClaim
+                    .mul(percentToClaim)
+                    .div(UNLOCK_PERCENT_DIVIDER);
+
+                if (
+                    claimableTokens >
+                    _staker.balanceToClaim - _staker.claimedBalance
+                ) {
+                    return _staker.balanceToClaim - _staker.claimedBalance;
                 } else {
-                    return claimableTokens;
+                    return claimableTokens.sub(_staker.claimedBalance);
                 }
             } else {
                 return
-                    totalTokens.mul(rewardUnlockPercentPerPeriod).div(
-                        UNLOCK_PERCENT_DIVIDER
-                    );
+                    _staker
+                        .balanceToClaim
+                        .mul(rewardUnlockPercentPerPeriod)
+                        .div(UNLOCK_PERCENT_DIVIDER);
             }
         } else {
             return 0;
         }
+    }
+
+    function _min(uint256 x, uint256 y) private pure returns (uint256) {
+        return x <= y ? x : y;
+    }
+
+    function setClaimRewardConfig(
+        uint256 _claimRewardStartTimestamp,
+        uint256 _claimPeriodDuration,
+        uint256 _rewardUnlockPercentPerPeriod
+    ) public onlyOwner {
+        claimRewardStartTimestamp = _claimRewardStartTimestamp;
+        claimPeriodDuration = _claimPeriodDuration;
+        rewardUnlockPercentPerPeriod = _rewardUnlockPercentPerPeriod;
     }
 }
 
