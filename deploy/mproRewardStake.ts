@@ -1,29 +1,32 @@
-import {ethers} from 'hardhat'
-import {LZ_ENDPOINTS} from '../constants/layerzeroEndpoints'
-import hre from 'hardhat'
 import {DeploymentsExtension} from 'hardhat-deploy/dist/types'
 import {verifyContractWithRetry} from '../utils/verifyContract'
+import {getDeploymentAddresses} from '../utils/readStatic'
 
 // npx hardhat deploy --tags MPRORewardStake --network base-sepolia
 
 module.exports = async function ({
 	deployments,
 	getNamedAccounts,
+	network,
 }: {
 	deployments: DeploymentsExtension
 	getNamedAccounts: any
+	network: any
 }) {
 	const {deployer, owner} = await getNamedAccounts()
 
 	const {deploy} = deployments
 
+	const netName = network.name
+
+	const deploymentAddresses = getDeploymentAddresses(netName)
+
+	const mproToken = deploymentAddresses['MPROLight']
+
 	const mproRewardStake = await deploy('MPRORewardStake', {
 		from: deployer,
 		args: [
-			'0xbf31DE649bA7AC79e92FEe4171B16c84B7c352A0', //MPRO token address,
-			1715592976,
-			1715932800,
-			1715760000,
+			mproToken, //MPRO token address,
 			owner,
 		],
 		log: true,
