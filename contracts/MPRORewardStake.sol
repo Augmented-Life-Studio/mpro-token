@@ -64,13 +64,20 @@ contract MPRORewardStake is Ownable, Pausable {
         address[] memory _stakers,
         uint256[] memory _amounts
     ) public onlyOwner {
+        // Check if input is valid
         require(
             _stakers.length == _amounts.length,
             "Invalid input - length mismatch"
         );
+        // Check if stake config is set
         require(
             stakeStartTimestamp > 0 && stakeEndTimestamp > 0,
             "Require to set stake config"
+        );
+        // Check is the staking period is valid
+        require(
+            block.timestamp >= stakeStartTimestamp,
+            "Can not update out of the staking period"
         );
         // Counting amount to update including pending rewards
         uint256 stakedAmountToUpdate = 0;
@@ -80,13 +87,13 @@ contract MPRORewardStake is Ownable, Pausable {
         uint256 rewardedAmountToUpdate = 0;
         for (uint256 i = 0; i < _stakers.length; i++) {
             Staker storage _staker = staker[_stakers[i]];
-            // Skip new stakers if declaration period is over
+            // Skip new stakers if declaration period is over or not started
             if (
                 _staker.staked == 0 &&
-                block.timestamp < declarationEndTimestamp &&
-                block.timestamp > declarationEndTimestamp
+                (block.timestamp > declarationEndTimestamp ||
+                    block.timestamp < declarationStartTimestamp)
             ) {
-                return;
+                continue;
             } else {
                 // Get pending reward from staked amount
                 uint256 rewardFromLastUpdateAt = compoundWalletReward(
@@ -130,6 +137,9 @@ contract MPRORewardStake is Ownable, Pausable {
      * @return uint256 The calculated reward amount.
      */
     function compoundWalletReward(address _account) private returns (uint256) {
+        if (block.timestamp < stakeStartTimestamp) {
+            return 0;
+        }
         Staker storage _staker = staker[_account];
         uint256 rewardToUpdate = pendingReward(_account);
         _staker.reward += rewardToUpdate;
@@ -221,7 +231,7 @@ contract MPRORewardStake is Ownable, Pausable {
     function updateReward(uint256 _amount) public onlyOwner {
         require(
             stakeStartTimestamp > 0 && stakeEndTimestamp > 0,
-            "Invalid stake period"
+            "Invalid stake period config"
         );
         mproToken.transferFrom(msg.sender, address(this), _amount);
         rewardTokenQuantity += _amount;
