@@ -253,18 +253,18 @@ describe('MPRORewardStake', function () {
 			await mine()
 			const stakerData = await mproRewardStake.staker(stakers[0].address)
 			const stakeDuration = stakeEndTimestamp - updateTimestamp
-			expect(stakerData[1]).to.be.equal(stakeEndTimestamp)
+			expect(stakerData[1]).to.be.equal(updateTimestamp)
 
 			const rewardRate = await mproRewardStake.rewardRate()
 			const expectedReward = stakeDuration * Number(rewardRate)
 			expect(
-				BigNumber.from(stakerData[2].toString()).sub(ethers.parseEther('100')),
+				await mproRewardStake.pendingReward(stakers[0].address),
 			).to.be.equal(BigNumber.from(expectedReward.toString()))
 		})
 	})
 
 	describe('claim function', function () {
-		it.only('Should claim reward correctly', async function () {
+		it('Should claim reward correctly', async function () {
 			await mproToken
 				.connect(owner)
 				.distibute(owner.address, ethers.parseEther('10000'))
@@ -346,6 +346,46 @@ describe('MPRORewardStake', function () {
 
 			const rewardAmount = await mproRewardStake.rewardTokenQuantity()
 			expect(rewardAmount).to.be.equal(dustBeforeStaking)
+		})
+
+		it('updateStakers with declaration period', async function () {
+			await mproToken
+				.connect(owner)
+				.distibute(owner.address, ethers.parseEther('10000'))
+			const currentBlock = await ethers.provider.getBlock('latest')
+			const currentTimestamp = currentBlock?.timestamp || 0
+			await mproRewardStake
+				.connect(owner)
+				.setStakeConfig(
+					currentTimestamp + ONE_DAY,
+					currentTimestamp + 2 * ONE_DAY,
+					currentTimestamp + ONE_DAY,
+					currentTimestamp + ONE_DAY + ONE_DAY / 2,
+				)
+
+			tx = await mproRewardStake
+				.connect(owner)
+				.updateReward(ethers.parseEther('1000'))
+			// Wait for stake start and declaration start
+			await network.provider.send('evm_increaseTime', [ONE_DAY])
+			await mine()
+			// update one wallet
+			await mproRewardStake
+				.connect(owner)
+				.updateStakers([stakers[0].address], [ethers.parseEther('100')])
+			// Wait for declaration end
+			await network.provider.send('evm_increaseTime', [ONE_DAY / 2 + 10])
+			await mine()
+			// update all wallets
+			await mproRewardStake.connect(owner).updateStakers(
+				stakers.map(s => s.address),
+				stakers.map(() => ethers.parseEther('100')),
+			)
+			// Check if only one staker is participating
+			const stakerData = await mproRewardStake.staker(stakers[0].address)
+			expect(stakerData[0]).to.be.equal(ethers.parseEther('200'))
+			const outStakerData = await mproRewardStake.staker(stakers[1].address)
+			expect(outStakerData[0]).to.be.equal(0)
 		})
 	})
 })
