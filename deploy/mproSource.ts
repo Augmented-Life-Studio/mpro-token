@@ -13,7 +13,7 @@ module.exports = async function ({
 	deployments: DeploymentsExtension
 	getNamedAccounts: any
 }) {
-	const {deployer, owner, treasury} = await getNamedAccounts()
+	const {deployer, owner} = await getNamedAccounts()
 
 	const TOKEN_NAME = 'MPROTest'
 	const TOKEN_SYMBOL = 'MPROTest'

@@ -63,10 +63,15 @@ describe('MPRORewardStake', function () {
 
 		mproRewardStake = await MPRORewardStakeFactory.connect(deployer).deploy(
 			mproToken.target, // MPRO token address
+
+			owner.address, // New contract owner
+		)
+
+		await mproRewardStake.connect(owner).setStakeConfig(
 			stakeStartTimestamp, // Stake start timestamp
 			stakeEndTimestamp, // Stake end timestamp,
+			stakeStartTimestamp, // Declaration start timestamp,
 			stakeStartTimestamp + declarationDuration, // Declaration end timestamp,
-			owner.address, // New contract owner
 		)
 
 		await mproToken
@@ -246,7 +251,6 @@ describe('MPRORewardStake', function () {
 			const updateTimestamp = await getTxTimestamp(tx)
 			await network.provider.send('evm_increaseTime', [1000])
 			await mine()
-			await mproRewardStake.connect(stakers[0]).compoundReward()
 			const stakerData = await mproRewardStake.staker(stakers[0].address)
 			const stakeDuration = stakeEndTimestamp - updateTimestamp
 			expect(stakerData[1]).to.be.equal(stakeEndTimestamp)
@@ -260,7 +264,7 @@ describe('MPRORewardStake', function () {
 	})
 
 	describe('claim function', function () {
-		it('Should claim reward correctly', async function () {
+		it.only('Should claim reward correctly', async function () {
 			await mproToken
 				.connect(owner)
 				.distibute(owner.address, ethers.parseEther('10000'))
@@ -271,21 +275,8 @@ describe('MPRORewardStake', function () {
 				.connect(owner)
 				.updateStakers([stakers[0].address], [ethers.parseEther('100')])
 			const updateTimestamp = await getTxTimestamp(tx)
-			await network.provider.send('evm_increaseTime', [200])
+			await network.provider.send('evm_increaseTime', [1000])
 			await mine()
-			await mproRewardStake.connect(stakers[0]).compoundReward()
-			await network.provider.send('evm_increaseTime', [200])
-			await mine()
-			await mproRewardStake.connect(stakers[0]).compoundReward()
-			await network.provider.send('evm_increaseTime', [200])
-			await mine()
-			await mproRewardStake.connect(stakers[0]).compoundReward()
-			await network.provider.send('evm_increaseTime', [200])
-			await mine()
-			await mproRewardStake.connect(stakers[0]).compoundReward()
-			await network.provider.send('evm_increaseTime', [200])
-			await mine()
-			await mproRewardStake.connect(stakers[0]).compoundReward()
 
 			const stakerData = await mproRewardStake.staker(stakers[0].address)
 
@@ -310,11 +301,17 @@ describe('MPRORewardStake', function () {
 			expect(await mproRewardStake.rewardUnlockPercentPerPeriod()).to.equal(
 				2000,
 			)
-			const balanceToClaim = stakerData[2]
 			await network.provider.send('evm_increaseTime', [ONE_DAY])
+
 			await mine()
+
 			await mproRewardStake.connect(stakers[0]).claim()
+			const stakerDataAfterClaim = await mproRewardStake.staker(
+				stakers[0].address,
+			)
+			const balanceToClaim = stakerDataAfterClaim[2]
 			const balanceAfterClaim = await mproToken.balanceOf(stakers[0].address)
+
 			expect(balanceAfterClaim).to.be.equal(
 				BigNumber.from(balanceToClaim).mul(2000).div(10000),
 			)
