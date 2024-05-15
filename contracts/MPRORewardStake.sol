@@ -337,6 +337,8 @@ contract MPRORewardStake is Ownable, Pausable {
         }
     }
 
+    // TODO add next release allocation
+
     /**
      * @dev Removes dust tokens from the contract.
      *
