@@ -1,21 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
+// TODO remove console
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MPRORewardStake is Ownable, Pausable {
     using SafeMath for uint256;
 
     uint256 private constant UNLOCK_PERCENT_DIVIDER = 10000;
 
-    IERC20 public immutable mproToken;
+    ERC20 public immutable rewardToken;
+    address public rewardTokenAddress;
 
     // Start of staking period
     uint256 public stakeStartTimestamp;
     // End of staking period
     uint256 public stakeEndTimestamp;
+    // Start of updating period
+    uint256 public updateStakersStartTimestamp;
+    // End of updating period
+    uint256 public updateStakersEndTimestamp;
     // Reward to be paid out per second
     uint256 public rewardRate;
     // Quantity of reward token to be paid out
@@ -32,7 +39,7 @@ contract MPRORewardStake is Ownable, Pausable {
     struct Staker {
         uint256 staked;
         uint256 lastUpdatedAt;
-        uint256 balanceToClaim;
+        uint256 balanceWithRewards;
         uint256 claimedBalance;
         uint256 reward;
     }
@@ -47,8 +54,19 @@ contract MPRORewardStake is Ownable, Pausable {
     // Duration of each claim period in seconds
     uint256 public claimPeriodDuration;
 
-    constructor(address _mproTokenAddress, address _newOwner) {
-        mproToken = IERC20(_mproTokenAddress);
+    mapping(address => bool) public isStakeWhitelisted;
+
+    modifier onlyWhitelistedStakes() {
+        require(
+            isStakeWhitelisted[msg.sender],
+            "MPRORewardStake: Stake contract is not whitelisted"
+        );
+        _;
+    }
+
+    constructor(address _rewardTokenAddress, address _newOwner) {
+        rewardToken = ERC20(_rewardTokenAddress);
+        rewardTokenAddress = _rewardTokenAddress;
         _transferOwnership(_newOwner);
     }
 
@@ -71,13 +89,13 @@ contract MPRORewardStake is Ownable, Pausable {
         );
         // Check if stake config is set
         require(
-            stakeStartTimestamp > 0 && stakeEndTimestamp > 0,
+            updateStakersStartTimestamp > 0 && updateStakersEndTimestamp > 0,
             "Require to set stake config"
         );
         // Check is the staking period is valid
         require(
-            block.timestamp >= stakeStartTimestamp,
-            "Can not update out of the staking period"
+            block.timestamp >= updateStakersStartTimestamp,
+            "Can not update out of the updating period"
         );
         // Counting amount to update including pending rewards
         uint256 stakedAmountToUpdate = 0;
@@ -101,18 +119,22 @@ contract MPRORewardStake is Ownable, Pausable {
                 );
                 // Update staked amount
                 _staker.staked += _amounts[i];
-                // Update total amount to transfer
+                // Update total amount to transfer for every staker
                 totalAmountToUpdate += _amounts[i];
                 // Amount that will be available to claim including compounded rewards
                 stakedAmountToUpdate += _amounts[i] + rewardFromLastUpdateAt;
                 // Update balance to claim
-                _staker.balanceToClaim += _amounts[i];
+                _staker.balanceWithRewards += _amounts[i];
                 // Update reward
                 rewardedAmountToUpdate += rewardFromLastUpdateAt;
             }
         }
         // Send required tokens to the contract address
-        mproToken.transferFrom(msg.sender, address(this), totalAmountToUpdate);
+        rewardToken.transferFrom(
+            msg.sender,
+            address(this),
+            totalAmountToUpdate
+        );
         // Update total staked supply increased by pending rewards
         rewardTokenQuantity -= rewardedAmountToUpdate;
         totalStakedSupply += stakedAmountToUpdate;
@@ -143,8 +165,8 @@ contract MPRORewardStake is Ownable, Pausable {
         Staker storage _staker = staker[_account];
         uint256 rewardToUpdate = pendingReward(_account);
         _staker.reward += rewardToUpdate;
-        _staker.balanceToClaim += rewardToUpdate;
-        _staker.lastUpdatedAt = _min(block.timestamp, stakeEndTimestamp);
+        _staker.balanceWithRewards += rewardToUpdate;
+        _staker.lastUpdatedAt = lastTimeRewardApplicable();
         return rewardToUpdate;
     }
 
@@ -161,7 +183,7 @@ contract MPRORewardStake is Ownable, Pausable {
         if (_staker.lastUpdatedAt == 0) {
             return 0;
         }
-        uint256 currentBalance = _staker.balanceToClaim;
+        uint256 currentBalance = _staker.balanceWithRewards;
         uint256 pendingRewardPerToken = rewardPerTokenFromTimestamp(
             _staker.lastUpdatedAt
         );
@@ -233,7 +255,7 @@ contract MPRORewardStake is Ownable, Pausable {
             stakeStartTimestamp > 0 && stakeEndTimestamp > 0,
             "Invalid stake period config"
         );
-        mproToken.transferFrom(msg.sender, address(this), _amount);
+        rewardToken.transferFrom(msg.sender, address(this), _amount);
         rewardTokenQuantity += _amount;
         rewardRate = rewardTokenQuantity / stakeDuration();
     }
@@ -243,23 +265,43 @@ contract MPRORewardStake is Ownable, Pausable {
      *
      * This function allows the sender to move tokens to another stake contract. It verifies that the contract is not paused, and the claim reward period has started. It calculates the amount of tokens available for release using the `enableForRelease` function and ensures that it is greater than zero. The tokens available for release are then added to the staker's claimed balance, and the stake contract specified by `_stakeAddress` is called to transfer the tokens.
      *
-     * @param _stakeAddress The address of the stake contract to which tokens will be moved.
+     * @param _stakerAddress The address of the staker.
      */
-    function moveToStake(address _stakeAddress) external virtual whenNotPaused {
-        require(
-            block.timestamp >= claimRewardStartTimestamp,
-            "MPRORewardStake: Not yet unlocked"
-        );
-        uint256 tokensEnableForRelease = enableForRelease();
-        require(
-            tokensEnableForRelease > 0,
-            "MPRORewardStake: No tokens to release"
-        );
-        Staker storage _staker = staker[_msgSender()];
-        _staker.claimedBalance += tokensEnableForRelease;
-        NextStake(_stakeAddress).transferStake(
-            tokensEnableForRelease,
-            _msgSender()
+    function moveToStake(
+        address _stakerAddress
+    )
+        external
+        virtual
+        whenNotPaused
+        onlyWhitelistedStakes
+        returns (bool, string memory, uint256)
+    {
+        if (
+            claimRewardStartTimestamp == 0 ||
+            block.timestamp < claimRewardStartTimestamp
+        ) return (false, "Claim period has not started", 0);
+
+        if (pendingReward(_stakerAddress) > 0) {
+            uint256 rewardFromLastUpdateAt = compoundWalletReward(
+                _stakerAddress
+            );
+            rewardTokenQuantity -= rewardFromLastUpdateAt;
+            totalStakedSupply += rewardFromLastUpdateAt;
+        }
+        Staker storage _staker = staker[_stakerAddress];
+
+        uint256 tokensEnableToTransfer = _staker.balanceWithRewards -
+            _staker.claimedBalance;
+        if (tokensEnableToTransfer == 0) {
+            return (false, "No tokens to release", tokensEnableToTransfer);
+        }
+
+        _staker.claimedBalance += tokensEnableToTransfer;
+        rewardToken.transfer(_msgSender(), tokensEnableToTransfer);
+        return (
+            true,
+            "Tokens transferred successfully",
+            tokensEnableToTransfer
         );
     }
 
@@ -269,6 +311,11 @@ contract MPRORewardStake is Ownable, Pausable {
      * This function allows the sender to claim tokens. It verifies that the contract is not paused and there are tokens available for claim. It updates the staker's balance to claim if there are pending rewards. It then ensures that the remaining balance to claim is sufficient for the tokens to be claimed. If the conditions are met, the tokens are transferred to the sender.
      */
     function claim() external virtual whenNotPaused {
+        require(
+            claimRewardStartTimestamp > 0 &&
+                block.timestamp >= claimRewardStartTimestamp,
+            "MPRORewardStake: Claim period has not started"
+        );
         Staker storage _staker = staker[_msgSender()];
         // Update remaining balance to claim
         if (pendingReward(_msgSender()) > 0) {
@@ -277,18 +324,19 @@ contract MPRORewardStake is Ownable, Pausable {
             totalStakedSupply += rewardFromLastUpdateAt;
         }
         uint256 tokensEnableForRelease = enableForRelease();
+
         require(
             tokensEnableForRelease > 0,
             "MPRORewardStake: No tokens to claim"
         );
 
         require(
-            _staker.balanceToClaim - _staker.claimedBalance >=
+            _staker.balanceWithRewards - _staker.claimedBalance >=
                 tokensEnableForRelease,
             "MPRORewardStake: Not enough tokens to claim"
         );
         _staker.claimedBalance += tokensEnableForRelease;
-        mproToken.transfer(_msgSender(), tokensEnableForRelease);
+        rewardToken.transfer(_msgSender(), tokensEnableForRelease);
     }
 
     /**
@@ -305,47 +353,92 @@ contract MPRORewardStake is Ownable, Pausable {
             if (
                 claimPeriodDuration > 0 && rewardUnlockPercentPerPeriod < 10000
             ) {
-                uint256 currentCycle = block
-                    .timestamp
-                    .sub(claimRewardStartTimestamp)
-                    .div(claimPeriodDuration);
-
                 // Calculate percent to claim
-                uint256 percentToClaim = rewardUnlockPercentPerPeriod.mul(
-                    currentCycle
-                );
+                uint256 percentToClaim = getCyclePercentToClaim(0);
 
                 // For instance balance to claim = 100, percent per period = 50, claimed balance = 0
                 uint256 claimableTokens = _staker
-                    .balanceToClaim
+                    .balanceWithRewards
                     .mul(percentToClaim)
                     .div(UNLOCK_PERCENT_DIVIDER);
                 if (
-                    claimableTokens >
-                    _staker.balanceToClaim - _staker.claimedBalance
+                    claimableTokens > // for example 60
+                    _staker.balanceWithRewards - _staker.claimedBalance // Balance to claim for example 60
                 ) {
-                    return _staker.balanceToClaim - _staker.claimedBalance;
+                    return _staker.balanceWithRewards - _staker.claimedBalance;
                 } else {
                     return claimableTokens.sub(_staker.claimedBalance);
                 }
                 // When claim config is not set we allow to claim all tokens
             } else {
-                return _staker.balanceToClaim;
+                return _staker.balanceWithRewards;
             }
         } else {
             return 0;
         }
     }
 
-    // TODO add next release allocation
+    function nextReleaseAllocation() public view returns (uint256) {
+        if (block.timestamp >= claimRewardStartTimestamp) {
+            Staker memory _staker = staker[_msgSender()];
+            // Check if claim config is set to retrive data about cycles
+            if (
+                claimPeriodDuration > 0 && rewardUnlockPercentPerPeriod < 10000
+            ) {
+                // Calculate percent to claim
+                uint256 percentToClaim = getCyclePercentToClaim(1);
+
+                // For instance balance to claim = 100, percent per period = 50, claimed balance = 0
+                uint256 claimableTokens = _staker
+                    .balanceWithRewards
+                    .mul(percentToClaim)
+                    .div(UNLOCK_PERCENT_DIVIDER);
+                if (
+                    claimableTokens > // for example 60
+                    _staker.balanceWithRewards - _staker.claimedBalance // Balance to claim for example 60
+                ) {
+                    return _staker.balanceWithRewards - _staker.claimedBalance;
+                } else {
+                    return claimableTokens.sub(_staker.claimedBalance);
+                }
+                // When claim config is not set we allow to claim all tokens
+            } else {
+                return _staker.balanceWithRewards;
+            }
+        } else {
+            return 0;
+        }
+    }
+
+    function getCyclePercentToClaim(
+        uint256 _cyclesToAdd
+    ) private view returns (uint256) {
+        if (block.timestamp >= claimRewardStartTimestamp) {
+            uint256 currentCycle = (
+                block.timestamp.sub(claimRewardStartTimestamp).div(
+                    claimPeriodDuration
+                )
+                // We add 1 to the current cycle to get the next cycle
+            ).add(_cyclesToAdd.add(1));
+
+            // Calculate percent to claim
+            uint256 percentToClaim = rewardUnlockPercentPerPeriod.mul(
+                currentCycle
+            );
+            return percentToClaim;
+        } else {
+            return 0;
+        }
+    }
 
     /**
      * @dev Removes dust tokens from the contract.
      *
      * This function allows the contract owner to transfer all remaining tokens (dust) from the contract to the owner's address.
+     * @param _amount The amount to remove from the contract.
      */
-    function removeDust() public onlyOwner {
-        mproToken.transfer(msg.sender, mproToken.balanceOf(address(this)));
+    function removeDust(uint256 _amount) public onlyOwner {
+        rewardToken.transfer(msg.sender, _amount);
     }
 
     /**
@@ -361,16 +454,21 @@ contract MPRORewardStake is Ownable, Pausable {
     function setStakeConfig(
         uint256 _stakeStartTimestamp,
         uint256 _stakeEndTimestamp,
+        uint256 _updateStakersStartTimestamp,
+        uint256 _updateStakersEndTimestamp,
         uint256 _declarationStartTimestamp,
         uint256 _declarationEndTimestamp
     ) public onlyOwner {
         require(
             _stakeStartTimestamp < _stakeEndTimestamp &&
-                _declarationStartTimestamp < _declarationEndTimestamp,
-            "Invalid stake or declaration period"
+                _declarationStartTimestamp < _declarationEndTimestamp &&
+                _updateStakersStartTimestamp < _updateStakersEndTimestamp,
+            "MPRORewardStake: Invalid stake configuration"
         );
         stakeStartTimestamp = _stakeStartTimestamp;
         stakeEndTimestamp = _stakeEndTimestamp;
+        updateStakersStartTimestamp = _updateStakersStartTimestamp;
+        updateStakersEndTimestamp = _updateStakersEndTimestamp;
         declarationStartTimestamp = _declarationStartTimestamp;
         declarationEndTimestamp = _declarationEndTimestamp;
     }
@@ -392,12 +490,20 @@ contract MPRORewardStake is Ownable, Pausable {
         require(
             _claimRewardStartTimestamp > 0 &&
                 _claimPeriodDuration > 0 &&
-                _rewardUnlockPercentPerPeriod > 0,
-            "Invalid claim reward configuration"
+                _rewardUnlockPercentPerPeriod > 0 &&
+                _rewardUnlockPercentPerPeriod <= 10000,
+            "MPRORewardStake: Invalid claim reward configuration"
         );
         claimRewardStartTimestamp = _claimRewardStartTimestamp;
         claimPeriodDuration = _claimPeriodDuration;
         rewardUnlockPercentPerPeriod = _rewardUnlockPercentPerPeriod;
+    }
+
+    function setStakeWhitelisted(
+        address _stakeAddress,
+        bool _isWhitelisted
+    ) public onlyOwner {
+        isStakeWhitelisted[_stakeAddress] = _isWhitelisted;
     }
 
     function _min(uint256 x, uint256 y) private pure returns (uint256) {
@@ -411,27 +517,4 @@ contract MPRORewardStake is Ownable, Pausable {
     function unpause() public onlyOwner {
         _unpause();
     }
-}
-
-interface IERC20 {
-    function totalSupply() external view returns (uint256);
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-    function allowance(
-        address owner,
-        address spender
-    ) external view returns (uint256);
-    function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-}
-
-interface NextStake {
-    function transferStake(uint256 _amount, address _staker) external;
 }
