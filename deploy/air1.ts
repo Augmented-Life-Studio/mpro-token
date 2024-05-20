@@ -51,7 +51,7 @@ module.exports = async function ({
 		vesting.address,
 	)
 
-	await ves.setVestingToken(MPRO_ADDRESS, {from: deployer})
+	 await ves.setVestingToken(MPRO_ADDRESS, {from: deployer})
 
 	await ves.registerBeneficiaries(addrs, amounts, {from: deployer})
 }
