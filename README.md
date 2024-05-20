@@ -105,6 +105,8 @@ npx hardhat --network ethereum deploy --tags PrivateRoundVesting
 npx hardhat --network ethereum deploy --tags FoundationVesting
 npx hardhat --network ethereum deploy --tags AdvisiorsVesting
 npx hardhat --network ethereum deploy --tags MarketingVesting
+npx hardhat --network ethereum deploy --tags AirdropVestingOne
+npx hardhat --network ethereum deploy --tags AirdropVestingTwo
 ```
 
 <!-- GETTING BENEFICIARIES -->
@@ -115,3 +117,5 @@ npx hardhat --network ethereum getBeneficiaries --contract PrivateRoundVesting
 npx hardhat --network ethereum getBeneficiaries --contract FoundationVesting
 npx hardhat --network ethereum getBeneficiaries --contract AdvisiorsVesting
 npx hardhat --network ethereum getBeneficiaries --contract MarketingVesting
+npx hardhat --network ethereum getBeneficiaries --contract AirdropVestingOne
+npx hardhat --network ethereum getBeneficiaries --contract AirdropVestingTwo
