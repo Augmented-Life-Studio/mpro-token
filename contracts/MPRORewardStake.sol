@@ -46,6 +46,13 @@ contract MPRORewardStake is Ownable, Pausable {
     // Stakers
     mapping(address => Staker) public staker;
 
+    struct StakeUpdate {
+        uint256 _blockTimestamp;
+        uint256 _updatedAmount;
+    }
+
+    mapping(address => StakeUpdate[]) public walletStakeUpdates;
+
     // CLAIM REWARD CONFIG
     // Start timestamp for claiming rewards
     uint256 public claimRewardStartTimestamp;
@@ -127,6 +134,13 @@ contract MPRORewardStake is Ownable, Pausable {
                 _staker.balanceWithRewards += _amounts[i];
                 // Update reward
                 rewardedAmountToUpdate += rewardFromLastUpdateAt;
+
+                walletStakeUpdates[_stakers[i]].push(
+                    StakeUpdate({
+                        _blockTimestamp: block.timestamp,
+                        _updatedAmount: _amounts[i] + rewardFromLastUpdateAt
+                    })
+                );
             }
         }
         // Send required tokens to the contract address
@@ -241,6 +255,12 @@ contract MPRORewardStake is Ownable, Pausable {
      */
     function getEarnedAmount(address _account) public view returns (uint256) {
         return staker[_account].reward;
+    }
+
+    function getWalletStakeUpdates(
+        address _account
+    ) public view returns (StakeUpdate[] memory) {
+        return walletStakeUpdates[_account];
     }
 
     /**

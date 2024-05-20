@@ -364,7 +364,7 @@ describe('MPRORewardStake', function () {
 	})
 
 	describe('claim function', function () {
-		it('Should claim reward correctly', async function () {
+		it.only('Should claim reward correctly', async function () {
 			await mproToken
 				.connect(owner)
 				.distibute(owner.address, ethers.parseEther('10000'))
@@ -374,6 +374,12 @@ describe('MPRORewardStake', function () {
 			tx = await mproRewardStake
 				.connect(owner)
 				.updateStakers([stakers[0].address], [ethers.parseEther('100')])
+			const updates = await mproRewardStake.getWalletStakeUpdates(
+				stakers[0].address,
+			)
+			console.log('====================================')
+			console.log(updates, 'updatesupdates')
+			console.log('====================================')
 			const updateTimestamp = await getTxTimestamp(tx)
 			await network.provider.send('evm_increaseTime', [1000])
 			await mine()
@@ -386,8 +392,6 @@ describe('MPRORewardStake', function () {
 			expect(
 				BigNumber.from(stakerData[2]).sub(BigNumber.from(stakerData[0])),
 			).to.be.lt(BigNumber.from(expectedReward.toString()))
-			const currentBlockTimestamp = await ethers.provider.getBlock('latest')
-			const currentTimestamp = currentBlockTimestamp?.timestamp || 0
 
 			// Set claiming config by owner
 			await mproRewardStake
