@@ -51,9 +51,25 @@ module.exports = async function ({
 		vesting.address,
 	)
 
-	 await ves.setVestingToken(MPRO_ADDRESS, {from: deployer})
+	//  await ves.setVestingToken(MPRO_ADDRESS, {from: deployer})
 
-	await ves.registerBeneficiaries(addrs, amounts, {from: deployer})
+	const WALLET_CHUNK = 150
+
+	for (let i = 0; i < addrs.length; i += WALLET_CHUNK) {
+		const chunkAddrs = addrs.slice(i, i + WALLET_CHUNK)
+		const chunkAmounts = amounts.slice(i, i + WALLET_CHUNK)
+		const tx = await ves.registerBeneficiaries(chunkAddrs, chunkAmounts, {
+			from: deployer,
+		})
+		await tx.wait()
+		console.log(
+			`Registered ${i + chunkAddrs.length} beneficiaries in transaction ${
+				tx.hash
+			}`,
+		)
+	}
+
+	// await ves.registerBeneficiaries(addrs, amounts, {from: deployer})
 }
 
 module.exports.tags = ['AirdropVestingTwo']
