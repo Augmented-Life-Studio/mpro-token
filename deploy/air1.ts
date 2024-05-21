@@ -19,7 +19,6 @@ module.exports = async function ({
 	getNamedAccounts: any
 }) {
 	const {deployer} = await getNamedAccounts()
-
 	const {deploy} = deployments
 
 	const vesting = await deploy(VESTING_CONTRACT_NAME, {
