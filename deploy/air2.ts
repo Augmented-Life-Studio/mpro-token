@@ -55,7 +55,7 @@ module.exports = async function ({
 
 	const WALLET_CHUNK = 150
 
-	for (let i = 0; i < addrs.length; i += WALLET_CHUNK) {
+	for (let i = 1500; i < addrs.length; i += WALLET_CHUNK) {
 		const chunkAddrs = addrs.slice(i, i + WALLET_CHUNK)
 		const chunkAmounts = amounts.slice(i, i + WALLET_CHUNK)
 		const tx = await ves.registerBeneficiaries(chunkAddrs, chunkAmounts, {
@@ -63,13 +63,15 @@ module.exports = async function ({
 		})
 		await tx.wait()
 		console.log(
-			`Registered ${i + chunkAddrs.length} beneficiaries in transaction ${
-				tx.hash
-			}`,
+			`Registered ${i + chunkAddrs.length}/${
+				addrs.length
+			} beneficiaries in transaction ${tx.hash}`,
 		)
 	}
 
-	// await ves.registerBeneficiaries(addrs, amounts, {from: deployer})
+	// Calculate sum to send to Vesting
+	const sum = addresses.reduce((acc, val) => acc + val.Amount, 0)
+	console.log(`Total amount to send to Vesting: ${sum}`)
 }
 
 module.exports.tags = ['AirdropVestingTwo']
