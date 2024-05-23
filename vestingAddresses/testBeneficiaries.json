@@ -1,6 +1,18 @@
 [
   {
+    "Address": "0x8B7C5D0F05Dc6A5Af60292A6061aE960b8a47274",
+    "Amount": "50000"
+  },
+  {
+    "Address": "0x767e5C2359e7c809b16D8cFFdB9464F91b6c970B",
+    "Amount": "50000"
+  },
+  {
     "Address": "0xA7F47Ef7374BBA82ea86318292f6ad53266BC94B",
+    "Amount": "50000"
+  },
+  {
+    "Address": "0xE561e33D8d54c4fa9250B8E096a5De3e5CD28FB8",
     "Amount": "50000"
   }
 ]
