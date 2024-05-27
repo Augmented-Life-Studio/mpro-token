@@ -27,7 +27,7 @@ module.exports = async function ({
 		from: deployer,
 		args: [
 			mproToken, //MPRO token address,
-			owner,
+			deployer,
 		],
 		log: true,
 		waitConfirmations: 5,
