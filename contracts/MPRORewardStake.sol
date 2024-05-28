@@ -63,10 +63,20 @@ contract MPRORewardStake is Ownable, Pausable {
 
     mapping(address => bool) public isStakeWhitelisted;
 
+    mapping(address => bool) public isUpdaterWhitelisted;
+
     modifier onlyWhitelistedStakes() {
         require(
             isStakeWhitelisted[msg.sender],
             "MPRORewardStake: Stake contract is not whitelisted"
+        );
+        _;
+    }
+
+    modifier onlyWhitelistedUpdaters() {
+        require(
+            isUpdaterWhitelisted[msg.sender] || msg.sender == owner(),
+            "MPRORewardStake: Address is not whitelisted updater"
         );
         _;
     }
@@ -88,7 +98,7 @@ contract MPRORewardStake is Ownable, Pausable {
     function updateStakers(
         address[] memory _stakers,
         uint256[] memory _amounts
-    ) public onlyOwner {
+    ) public onlyWhitelistedUpdaters {
         // Check if input is valid
         require(
             _stakers.length == _amounts.length,
@@ -485,12 +495,29 @@ contract MPRORewardStake is Ownable, Pausable {
                 _updateStakersStartTimestamp < _updateStakersEndTimestamp,
             "MPRORewardStake: Invalid stake configuration"
         );
+        require(
+            _stakeStartTimestamp > block.timestamp &&
+                _stakeEndTimestamp > block.timestamp &&
+                _updateStakersStartTimestamp > block.timestamp &&
+                _updateStakersEndTimestamp > block.timestamp &&
+                _declarationStartTimestamp > block.timestamp &&
+                _declarationEndTimestamp > block.timestamp,
+            "MPRORewardStake: Invalid stake configuration - timestamps should be in the future"
+        );
+        if (stakeStartTimestamp > 0) {
+            require(
+                block.timestamp < stakeStartTimestamp,
+                "MPRORewardStake: Stake period has started"
+            );
+        }
         stakeStartTimestamp = _stakeStartTimestamp;
         stakeEndTimestamp = _stakeEndTimestamp;
         updateStakersStartTimestamp = _updateStakersStartTimestamp;
         updateStakersEndTimestamp = _updateStakersEndTimestamp;
         declarationStartTimestamp = _declarationStartTimestamp;
         declarationEndTimestamp = _declarationEndTimestamp;
+        if (rewardTokenQuantity > 0)
+            rewardRate = rewardTokenQuantity / stakeDuration();
     }
 
     /**
@@ -524,6 +551,13 @@ contract MPRORewardStake is Ownable, Pausable {
         bool _isWhitelisted
     ) public onlyOwner {
         isStakeWhitelisted[_stakeAddress] = _isWhitelisted;
+    }
+
+    function setUpdaterWhitelisted(
+        address _walletAddress,
+        bool _isWhitelisted
+    ) public onlyOwner {
+        isUpdaterWhitelisted[_walletAddress] = _isWhitelisted;
     }
 
     function _min(uint256 x, uint256 y) private pure returns (uint256) {
