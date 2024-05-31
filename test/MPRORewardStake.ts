@@ -904,17 +904,23 @@ describe('MPRORewardStake', function () {
 		it('Should revert when called by non-owner or non-whitelisted address', async () => {
 			await mproToken.connect(owner).distibute(owner.address, 1100)
 			await mproRewardStake.connect(owner).updateReward(1000)
-			await expect(mproRewardStake
-				.connect(stakers[0])
-				.updateStakers([stakers[0].address], [100])).to.be.revertedWith("MPRORewardStake: Address is not whitelisted updater")
+			await expect(
+				mproRewardStake
+					.connect(stakers[0])
+					.updateStakers([stakers[0].address], [100]),
+			).to.be.revertedWith(
+				'MPRORewardStake: Address is not whitelisted updater',
+			)
 		})
 
 		it('Should revert when stakers and amounts lengths are not the same', async () => {
 			await mproToken.connect(owner).distibute(owner.address, 1100)
 			await mproRewardStake.connect(owner).updateReward(1000)
-			await expect(mproRewardStake
-				.connect(owner)
-				.updateStakers([stakers[0].address], [100, 100])).to.be.revertedWith("Invalid input - length mismatch")
+			await expect(
+				mproRewardStake
+					.connect(owner)
+					.updateStakers([stakers[0].address], [100, 100]),
+			).to.be.revertedWith('Invalid input - length mismatch')
 		})
 
 		it('Should properly add new staker', async () => {
@@ -940,22 +946,28 @@ describe('MPRORewardStake', function () {
 				)
 			await mproToken.connect(owner).distibute(owner.address, 1500)
 			await mproRewardStake.connect(owner).updateReward(1000)
-			await expect(mproRewardStake
-				.connect(owner)
-				.updateStakers([stakers[0].address], [100])).to.be.revertedWith("Can not update out of the updating period")
+			await expect(
+				mproRewardStake
+					.connect(owner)
+					.updateStakers([stakers[0].address], [100]),
+			).to.be.revertedWith('Can not update out of the updating period')
 		})
 
 		it('Should throw error when amount is negative', async () => {
 			try {
 				await mproToken.connect(owner).distibute(owner.address, 1100)
 				await mproRewardStake.connect(owner).updateReward(1000)
-				await expect(mproRewardStake
-					.connect(owner)
-					.updateStakers([stakers[0].address], [-10])).to.be.revertedWith("Can not update out of the updating period")
-				expect.fail("Expected error not thrown");
-				} catch (error: any) {
-				expect(error.message).to.be.equal(`value out-of-bounds (argument="", value=-10, code=INVALID_ARGUMENT, version=6.12.0)`)
-				}
+				await expect(
+					mproRewardStake
+						.connect(owner)
+						.updateStakers([stakers[0].address], [-10]),
+				).to.be.revertedWith('Can not update out of the updating period')
+				expect.fail('Expected error not thrown')
+			} catch (error: any) {
+				expect(error.message).to.be.equal(
+					`value out-of-bounds (argument="", value=-10, code=INVALID_ARGUMENT, version=6.12.0)`,
+				)
+			}
 		})
 
 		it('Should allow updateStakers with amount set to zero', async () => {
@@ -977,14 +989,18 @@ describe('MPRORewardStake', function () {
 			await mproRewardStake
 				.connect(owner)
 				.updateStakers([stakers[0].address], [100])
-			let stakedAmount = await mproRewardStake.connect(owner).getStakedAmount(stakers[0])
+			let stakedAmount = await mproRewardStake
+				.connect(owner)
+				.getStakedAmount(stakers[0])
 			expect(stakedAmount).to.equal(200)
 		})
 
 		it('Should return zero for non-staker', async () => {
 			await mproToken.connect(owner).distibute(owner.address, 1100)
 			await mproRewardStake.connect(owner).updateReward(1000)
-			let stakedAmount = await mproRewardStake.connect(owner).getStakedAmount(stakers[0])
+			let stakedAmount = await mproRewardStake
+				.connect(owner)
+				.getStakedAmount(stakers[0])
 			expect(stakedAmount).to.equal(0)
 		})
 	})
@@ -994,19 +1010,21 @@ describe('MPRORewardStake', function () {
 			await mproRewardStake
 				.connect(owner)
 				.setClaimRewardConfig(stakeEndTimestamp, ONE_DAY, 1000)
-			await mproToken.connect(owner).distibute(owner.address, ethers.parseEther('1200'))
-			await mproRewardStake.connect(owner).updateReward(ethers.parseEther('1000'))
+			await mproToken
+				.connect(owner)
+				.distibute(owner.address, ethers.parseEther('1200'))
 			await mproRewardStake
 				.connect(owner)
-				.updateStakers([stakers[0].address], [ethers.parseEther('100')])
-			
+				.updateReward(ethers.parseEther('1000'))
 			await mproRewardStake
 				.connect(owner)
 				.updateStakers([stakers[0].address], [ethers.parseEther('100')])
 
-			const stakerData = await mproRewardStake.staker(
-				stakers[0].address,
-			)
+			await mproRewardStake
+				.connect(owner)
+				.updateStakers([stakers[0].address], [ethers.parseEther('100')])
+
+			const stakerData = await mproRewardStake.staker(stakers[0].address)
 			expect(stakerData.reward).to.equal(ethers.parseEther('1'))
 		})
 
@@ -1014,12 +1032,14 @@ describe('MPRORewardStake', function () {
 			await mproRewardStake
 				.connect(owner)
 				.setClaimRewardConfig(stakeEndTimestamp, ONE_DAY, 1000)
-			await mproToken.connect(owner).distibute(owner.address, ethers.parseEther('1200'))
-			await mproRewardStake.connect(owner).updateReward(ethers.parseEther('1000'))
+			await mproToken
+				.connect(owner)
+				.distibute(owner.address, ethers.parseEther('1200'))
+			await mproRewardStake
+				.connect(owner)
+				.updateReward(ethers.parseEther('1000'))
 
-			const stakerData = await mproRewardStake.staker(
-				stakers[0].address,
-			)
+			const stakerData = await mproRewardStake.staker(stakers[0].address)
 			expect(stakerData.reward).to.equal(ethers.parseEther('0'))
 		})
 
@@ -1027,55 +1047,60 @@ describe('MPRORewardStake', function () {
 			await mproRewardStake
 				.connect(owner)
 				.setClaimRewardConfig(stakeEndTimestamp, ONE_DAY, 1000)
-			await mproToken.connect(owner).distibute(owner.address, ethers.parseEther('1400'))
-			await mproRewardStake.connect(owner).updateReward(ethers.parseEther('1000'))
+			await mproToken
+				.connect(owner)
+				.distibute(owner.address, ethers.parseEther('1400'))
 			await mproRewardStake
 				.connect(owner)
-				.updateStakers([stakers[0].address, stakers[1].address], [ethers.parseEther('100'), ethers.parseEther('100')])
-
-				let dataStaker_0 = await mproRewardStake.staker(
-					stakers[0].address,
-				)
-				let dataStaker_1 = await mproRewardStake.staker(
-					stakers[1].address,
-				)
-				expect(dataStaker_0.reward).to.equal(ethers.parseEther('0'))
-				expect(dataStaker_1.reward).to.equal(ethers.parseEther('0'))
-
+				.updateReward(ethers.parseEther('1000'))
 			await mproRewardStake
 				.connect(owner)
-				.updateStakers([stakers[0].address, stakers[1].address], [ethers.parseEther('200'), ethers.parseEther('0')])
+				.updateStakers(
+					[stakers[0].address, stakers[1].address],
+					[ethers.parseEther('100'), ethers.parseEther('100')],
+				)
 
-				dataStaker_0 = await mproRewardStake.staker(
-					stakers[0].address,
-				)
-				dataStaker_1 = await mproRewardStake.staker(
-					stakers[1].address,
-				)
-				expect(dataStaker_0.reward).to.equal(dataStaker_1.reward)
+			let dataStaker_0 = await mproRewardStake.staker(stakers[0].address)
+			let dataStaker_1 = await mproRewardStake.staker(stakers[1].address)
+			expect(dataStaker_0.reward).to.equal(ethers.parseEther('0'))
+			expect(dataStaker_1.reward).to.equal(ethers.parseEther('0'))
 
 			await mproRewardStake
 				.connect(owner)
-				.updateStakers([stakers[0].address, stakers[1].address], [ethers.parseEther('0'), ethers.parseEther('0')])
+				.updateStakers(
+					[stakers[0].address, stakers[1].address],
+					[ethers.parseEther('200'), ethers.parseEther('0')],
+				)
 
-			dataStaker_0 = await mproRewardStake.staker(
-				stakers[0].address,
-			)
-			dataStaker_1 = await mproRewardStake.staker(
-				stakers[1].address,
-			)
+			dataStaker_0 = await mproRewardStake.staker(stakers[0].address)
+			dataStaker_1 = await mproRewardStake.staker(stakers[1].address)
+			expect(dataStaker_0.reward).to.equal(dataStaker_1.reward)
+
+			await mproRewardStake
+				.connect(owner)
+				.updateStakers(
+					[stakers[0].address, stakers[1].address],
+					[ethers.parseEther('0'), ethers.parseEther('0')],
+				)
+
+			dataStaker_0 = await mproRewardStake.staker(stakers[0].address)
+			dataStaker_1 = await mproRewardStake.staker(stakers[1].address)
 			expect(dataStaker_0.reward).to.be.greaterThan(dataStaker_1.reward)
 		})
 	})
 
-	describe('Additional checks', () => {
+	describe.only('Additional checks', () => {
 		it('Should allow user to claim properly (claim 60%)', async () => {
 			// Set claim with claim percent over 50%
 			await mproRewardStake
 				.connect(owner)
 				.setClaimRewardConfig(stakeEndTimestamp, 500, 6000)
-			await mproToken.connect(owner).distibute(owner.address, ethers.parseEther('1300'))
-			await mproRewardStake.connect(owner).updateReward(ethers.parseEther('1000'))
+			await mproToken
+				.connect(owner)
+				.distibute(owner.address, ethers.parseEther('1300'))
+			await mproRewardStake
+				.connect(owner)
+				.updateReward(ethers.parseEther('1000'))
 			// updateStaker with 100 tokens
 			await mproRewardStake
 				.connect(owner)
@@ -1092,7 +1117,13 @@ describe('MPRORewardStake', function () {
 
 			await mproRewardStake.connect(stakers[0]).claim()
 			// Second claim should be reverted because it is not next claim period yet
-			await expect(mproRewardStake.connect(stakers[0]).claim()).to.be.reverted;
+			await expect(mproRewardStake.connect(stakers[0]).claim()).to.be.reverted
+
+			// Then enable to release another 60% of reward
+			await network.provider.send('evm_increaseTime', [900])
+			await mine()
+
+			await mproRewardStake.connect(stakers[0]).claim()
 		})
 
 		it('Should allow user to claim properly (claim 40%)', async () => {
@@ -1100,8 +1131,12 @@ describe('MPRORewardStake', function () {
 			await mproRewardStake
 				.connect(owner)
 				.setClaimRewardConfig(stakeEndTimestamp, 500, 4000)
-			await mproToken.connect(owner).distibute(owner.address, ethers.parseEther('1300'))
-			await mproRewardStake.connect(owner).updateReward(ethers.parseEther('1000'))
+			await mproToken
+				.connect(owner)
+				.distibute(owner.address, ethers.parseEther('1300'))
+			await mproRewardStake
+				.connect(owner)
+				.updateReward(ethers.parseEther('1000'))
 			// updateStaker with 100 tokens
 			await mproRewardStake
 				.connect(owner)
@@ -1118,37 +1153,50 @@ describe('MPRORewardStake', function () {
 			// First claim - 40%
 			await mproRewardStake.connect(stakers[0]).claim()
 			let balanceClaim = await mproToken.balanceOf(stakers[0].address)
-			await expect(balanceClaim).to.be.approximately(ethers.parseEther('480'), ethers.parseEther('5'))
+			await expect(balanceClaim).to.be.approximately(
+				ethers.parseEther('480'),
+				ethers.parseEther('5'),
+			)
 			// Skip to next claiming period
 			await network.provider.send('evm_increaseTime', [500])
 			await mine()
 			// Should claim another 40%
 			await mproRewardStake.connect(stakers[0]).claim()
 			balanceClaim = await mproToken.balanceOf(stakers[0].address)
-			await expect(balanceClaim).to.be.approximately(ethers.parseEther('960'), ethers.parseEther('10'))
+			await expect(balanceClaim).to.be.approximately(
+				ethers.parseEther('960'),
+				ethers.parseEther('10'),
+			)
 			// Skip to next claiming period
 			await network.provider.send('evm_increaseTime', [500])
 			await mine()
 			// Should claim remaining 20%
 			await mproRewardStake.connect(stakers[0]).claim()
-						balanceClaim = await mproToken.balanceOf(stakers[0].address)
-			await expect(balanceClaim).to.be.approximately(ethers.parseEther('1200'), ethers.parseEther('20'))
+			balanceClaim = await mproToken.balanceOf(stakers[0].address)
+			await expect(balanceClaim).to.be.approximately(
+				ethers.parseEther('1200'),
+				ethers.parseEther('20'),
+			)
 		})
 
 		it('Should calculate rewardRate properly', async () => {
 			// Before updateReward the rewardRate should be equal to 0
-			let rewardRate = await mproRewardStake.rewardRate();
-			await expect (rewardRate).to.equal(ethers.parseEther('0'))
-			
+			let rewardRate = await mproRewardStake.rewardRate()
+			await expect(rewardRate).to.equal(ethers.parseEther('0'))
+
 			// Set claim config
 			await mproRewardStake
 				.connect(owner)
 				.setClaimRewardConfig(stakeEndTimestamp, 100, 10000)
-			await mproToken.connect(owner).distibute(owner.address, ethers.parseEther('2200'))
+			await mproToken
+				.connect(owner)
+				.distibute(owner.address, ethers.parseEther('2200'))
 			// Check if rewardRate is calculated properly after first updateReward
-			await mproRewardStake.connect(owner).updateReward(ethers.parseEther('1000'))
-			rewardRate = await mproRewardStake.rewardRate();
-			await expect (rewardRate).to.equal(ethers.parseEther('1'))
+			await mproRewardStake
+				.connect(owner)
+				.updateReward(ethers.parseEther('1000'))
+			rewardRate = await mproRewardStake.rewardRate()
+			await expect(rewardRate).to.equal(ethers.parseEther('1'))
 			// updateStakers with 100 tokens
 			await mproRewardStake
 				.connect(owner)
@@ -1163,9 +1211,11 @@ describe('MPRORewardStake', function () {
 			await network.provider.send('evm_increaseTime', [400])
 			await mine()
 			// updateReward again (tokens from users that do not participate in stake)
-			await mproRewardStake.connect(owner).updateReward(ethers.parseEther('1000'))
+			await mproRewardStake
+				.connect(owner)
+				.updateReward(ethers.parseEther('1000'))
 			// Check rewardRate
-			rewardRate = await mproRewardStake.rewardRate();
+			rewardRate = await mproRewardStake.rewardRate()
 			// await expect (rewardRate).to.equal(ethers.parseEther('1'))
 
 			await network.provider.send('evm_increaseTime', [500])
@@ -1175,7 +1225,10 @@ describe('MPRORewardStake', function () {
 
 			// User should get all his stakedTokens (200) + rewardCounting (1000 + 1000) - rewardCounting before he joined Autostake
 			const balanceClaim = await mproToken.balanceOf(stakers[0].address)
-			await expect(balanceClaim).to.be.approximately(ethers.parseEther('2200'), ethers.parseEther('20'))
+			await expect(balanceClaim).to.be.approximately(
+				ethers.parseEther('2200'),
+				ethers.parseEther('20'),
+			)
 		})
 	})
 })
