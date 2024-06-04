@@ -439,6 +439,21 @@ contract MPRORewardStake is Ownable, Pausable {
         }
     }
 
+    function nextReleaseTimestamp() public view returns (uint256) {
+        if (block.timestamp < claimRewardStartTimestamp) {
+            return claimRewardStartTimestamp;
+        } else {
+            uint256 rewardCycle = 1;
+            rewardCycle += block.timestamp.sub(claimRewardStartTimestamp).div(
+                claimPeriodDuration
+            );
+            return
+                claimRewardStartTimestamp.add(
+                    rewardCycle.mul(claimPeriodDuration)
+                );
+        }
+    }
+
     function getCyclePercentToClaim(
         uint256 _cyclesToAdd
     ) private view returns (uint256) {

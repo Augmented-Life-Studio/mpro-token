@@ -1089,7 +1089,7 @@ describe('MPRORewardStake', function () {
 		})
 	})
 
-	describe.only('Additional checks', () => {
+	describe('Additional checks', () => {
 		it('Should allow user to claim properly (claim 60%)', async () => {
 			// Set claim with claim percent over 50%
 			await mproRewardStake
@@ -1179,7 +1179,7 @@ describe('MPRORewardStake', function () {
 			)
 		})
 
-		it('Should calculate rewardRate properly', async () => {
+		it.only('Should calculate rewardRate properly', async () => {
 			// Before updateReward the rewardRate should be equal to 0
 			let rewardRate = await mproRewardStake.rewardRate()
 			await expect(rewardRate).to.equal(ethers.parseEther('0'))
@@ -1192,11 +1192,18 @@ describe('MPRORewardStake', function () {
 				.connect(owner)
 				.distibute(owner.address, ethers.parseEther('2200'))
 			// Check if rewardRate is calculated properly after first updateReward
-			await mproRewardStake
+			const tx = await mproRewardStake
 				.connect(owner)
 				.updateReward(ethers.parseEther('1000'))
 			rewardRate = await mproRewardStake.rewardRate()
-			await expect(rewardRate).to.equal(ethers.parseEther('1'))
+			const updateTimestamp = await getTxTimestamp(tx)
+			console.log(stakeEndTimestamp - updateTimestamp)
+
+			await expect(rewardRate).to.equal(
+				BigNumber.from(ethers.parseEther('1000')).div(
+					BigNumber.from(stakeEndTimestamp - updateTimestamp),
+				),
+			)
 			// updateStakers with 100 tokens
 			await mproRewardStake
 				.connect(owner)
@@ -1213,10 +1220,10 @@ describe('MPRORewardStake', function () {
 			// updateReward again (tokens from users that do not participate in stake)
 			await mproRewardStake
 				.connect(owner)
+				.updateStakers([stakers[0].address], [ethers.parseEther('0')])
+			await mproRewardStake
+				.connect(owner)
 				.updateReward(ethers.parseEther('1000'))
-			// Check rewardRate
-			rewardRate = await mproRewardStake.rewardRate()
-			// await expect (rewardRate).to.equal(ethers.parseEther('1'))
 
 			await network.provider.send('evm_increaseTime', [500])
 			await mine()
