@@ -108,6 +108,7 @@ npx hardhat --network ethereum deploy --tags MarketingVesting
 npx hardhat --network ethereum deploy --tags AirdropVestingOne
 npx hardhat --network ethereum deploy --tags AirdropVestingTwo
 npx hardhat --network base-sepolia deploy --tags TestVesting
+npx hardhat --network base-sepolia deploy --tags MPRORewardStake
 ```
 
 <!-- GETTING BENEFICIARIES -->

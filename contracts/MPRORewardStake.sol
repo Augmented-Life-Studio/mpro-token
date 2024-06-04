@@ -391,14 +391,13 @@ contract MPRORewardStake is Ownable, Pausable {
                     .balanceWithRewards
                     .mul(percentToClaim)
                     .div(UNLOCK_PERCENT_DIVIDER);
+
                 if (
-                    claimableTokens > // for example 60
-                    _staker.balanceWithRewards - _staker.claimedBalance // Balance to claim for example 60
+                    claimableTokens > _staker.balanceWithRewards // for example 60 // Balance to claim for example 60
                 ) {
-                    return _staker.balanceWithRewards - _staker.claimedBalance;
-                } else {
-                    return claimableTokens.sub(_staker.claimedBalance);
+                    claimableTokens = _staker.balanceWithRewards;
                 }
+                return claimableTokens.sub(_staker.claimedBalance);
                 // When claim config is not set we allow to claim all tokens
             } else {
                 return _staker.balanceWithRewards;
@@ -437,6 +436,21 @@ contract MPRORewardStake is Ownable, Pausable {
             }
         } else {
             return 0;
+        }
+    }
+
+    function nextReleaseTimestamp() public view returns (uint256) {
+        if (block.timestamp < claimRewardStartTimestamp) {
+            return claimRewardStartTimestamp;
+        } else {
+            uint256 rewardCycle = 1;
+            rewardCycle += block.timestamp.sub(claimRewardStartTimestamp).div(
+                claimPeriodDuration
+            );
+            return
+                claimRewardStartTimestamp.add(
+                    rewardCycle.mul(claimPeriodDuration)
+                );
         }
     }
 

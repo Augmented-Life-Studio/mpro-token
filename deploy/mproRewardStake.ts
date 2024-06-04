@@ -23,25 +23,49 @@ module.exports = async function ({
 
 	const mproToken = deploymentAddresses['MPROLight']
 
-	const mproRewardStake = await deploy('MPRORewardStake', {
-		from: deployer,
-		args: [
-			mproToken, //MPRO token address,
-			deployer,
-		],
-		log: true,
-		waitConfirmations: 5,
-		skipIfAlreadyDeployed: true,
-		contract: 'contracts/MPRORewardStake.sol:MPRORewardStake',
-	})
+	const newArrayWith5 = Array(5).fill(0)
 
-	console.log('MPRORewardStake deployed to:', mproRewardStake.address)
+	for (let i = 0; i < newArrayWith5.length; i++) {
+		const mproRewardStake = await deploy(`MPRORewardStake${i + 1}`, {
+			from: deployer,
+			args: [
+				mproToken, //MPRO token address,
+				deployer,
+			],
+			log: true,
+			waitConfirmations: 5,
+			skipIfAlreadyDeployed: true,
+			contract: 'contracts/MPRORewardStake.sol:MPRORewardStake',
+		})
 
-	await verifyContractWithRetry(
-		'contracts/MPRORewardStake.sol:MPRORewardStake',
-		mproRewardStake.address,
-		mproRewardStake.args,
-	)
+		console.log('MPRORewardStake deployed to:', mproRewardStake.address)
+
+		await verifyContractWithRetry(
+			'contracts/MPRORewardStake.sol:MPRORewardStake',
+			mproRewardStake.address,
+			mproRewardStake.args,
+		)
+	}
+
+	// const mproRewardStake = await deploy('MPRORewardStake', {
+	// 	from: deployer,
+	// 	args: [
+	// 		mproToken, //MPRO token address,
+	// 		deployer,
+	// 	],
+	// 	log: true,
+	// 	waitConfirmations: 5,
+	// 	skipIfAlreadyDeployed: true,
+	// 	contract: 'contracts/MPRORewardStake.sol:MPRORewardStake',
+	// })
+
+	// console.log('MPRORewardStake deployed to:', mproRewardStake.address)
+
+	// await verifyContractWithRetry(
+	// 	'contracts/MPRORewardStake.sol:MPRORewardStake',
+	// 	mproRewardStake.address,
+	// 	mproRewardStake.args,
+	// )
 }
 
 module.exports.tags = ['MPRORewardStake']
