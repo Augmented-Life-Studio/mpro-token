@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "hardhat/console.sol";
 
-contract MPROStake {
+contract MockedMPROStake {
     struct Staker {
         uint256 staked;
         uint256 lastUpdatedAt;

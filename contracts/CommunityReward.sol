@@ -226,7 +226,6 @@ contract CommunityReward is Ownable {
             );
         }
 
-        console.log(pool.accRewardTokenPerShare, "pool.accRewardTokenPerShare");
         user.rewardDebt = user.amount.mul(pool.accRewardTokenPerShare).div(
             1e18
         );
