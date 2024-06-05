@@ -43,6 +43,8 @@ contract MPROStake is Ownable, Pausable {
 
     uint256 public lastUpdateRewardTimestamp;
 
+    uint256 private distributedReward;
+
     struct Staker {
         // pure staked tokens
         uint256 staked;
@@ -182,6 +184,7 @@ contract MPROStake is Ownable, Pausable {
             .mul(accRewardTokenPerShare)
             .div(1e18)
             .sub(_staker.rewardDebt);
+
         if (pending > 0) {
             _staker.reward += pending;
             _staker.balanceWithRewards += pending;
@@ -221,6 +224,7 @@ contract MPROStake is Ownable, Pausable {
                 lastRewardTimestamp,
                 block.timestamp
             );
+
             uint256 rewardTokenReward = multiplier.mul(rewardPerSecond);
             _accRewardPerShare = accRewardTokenPerShare.add(
                 rewardTokenReward.mul(1e18).div(totalStakedSupply)
@@ -245,11 +249,11 @@ contract MPROStake is Ownable, Pausable {
             lastRewardTimestamp,
             block.timestamp
         );
-
         uint256 rewardTokenReward = multiplier.mul(rewardPerSecond);
         accRewardTokenPerShare = accRewardTokenPerShare.add(
             rewardTokenReward.mul(1e18).div(totalStakedSupply)
         );
+
         lastRewardTimestamp = block.timestamp;
     }
 
@@ -325,17 +329,28 @@ contract MPROStake is Ownable, Pausable {
         rewardTokenQuantity += _amount;
         accRewardTokenQuantity += _amount;
         uint256 remainingStakeTime = stakeEndTimestamp - block.timestamp;
+        if (block.timestamp < stakeStartTimestamp) {
+            remainingStakeTime = stakeEndTimestamp - stakeStartTimestamp;
+        }
 
-        uint256 distributedReward = 0;
-        if (lastUpdateRewardTimestamp > 0) {
-            distributedReward = rewardPerSecond.mul(
+        if (
+            lastUpdateRewardTimestamp > 0 &&
+            block.timestamp > stakeStartTimestamp
+        ) {
+            distributedReward += rewardPerSecond.mul(
                 block.timestamp - lastUpdateRewardTimestamp
             );
         }
+
         rewardPerSecond =
             (accRewardTokenQuantity - distributedReward) /
             remainingStakeTime;
-        lastUpdateRewardTimestamp = block.timestamp;
+
+        if (block.timestamp > stakeStartTimestamp) {
+            lastUpdateRewardTimestamp = block.timestamp;
+        } else {
+            lastUpdateRewardTimestamp = stakeStartTimestamp;
+        }
     }
 
     /**
