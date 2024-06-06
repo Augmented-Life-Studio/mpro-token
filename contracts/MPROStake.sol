@@ -40,9 +40,9 @@ contract MPROStake is Ownable, Pausable {
     uint256 public accRewardTokenPerShare;
     // Accumulated reward token quantity
     uint256 public accRewardTokenQuantity;
-
+    //  Last update reward timestamp (function updateReward)
     uint256 public lastUpdateRewardTimestamp;
-
+    // For updating rewards in the future we need to know how much reward was distributed
     uint256 private distributedReward;
 
     struct Staker {
@@ -374,15 +374,16 @@ contract MPROStake is Ownable, Pausable {
             block.timestamp < claimRewardStartTimestamp
         ) return (false, "Claim period has not started", 0);
         updatePool();
+        Staker storage _staker = staker[_stakerAddress];
         // Update remaining balance to claim
-        if (pendingReward(_msgSender()) > 0) {
-            uint256 reward = stakeReward(_msgSender());
+        if (pendingReward(_stakerAddress) > 0) {
+            uint256 reward = stakeReward(_stakerAddress);
             rewardTokenQuantity -= reward;
         }
-        Staker storage _staker = staker[_stakerAddress];
 
         uint256 tokensEnableToTransfer = _staker.balanceWithRewards -
             _staker.claimedBalance;
+
         if (tokensEnableToTransfer == 0) {
             return (false, "No tokens to release", tokensEnableToTransfer);
         }
