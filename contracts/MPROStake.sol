@@ -10,8 +10,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract MPROStake is Ownable, Pausable {
     using SafeMath for uint256;
 
+    // Unlock percent divider
     uint256 private constant UNLOCK_PERCENT_DIVIDER = 10000;
 
+    // Reward token
     IERC20 public immutable rewardToken;
 
     // Start of staking period
@@ -92,6 +94,14 @@ contract MPROStake is Ownable, Pausable {
         _;
     }
 
+    /**
+     * @dev Initializes the MPROStake contract.
+     *
+     * This function initializes the MPROStake contract with the specified reward token address and the new owner address. It sets the reward token and transfers the ownership to the new owner.
+     *
+     * @param _rewardTokenAddress The address of the reward token.
+     * @param _newOwner The address of the new owner.
+     */
     constructor(address _rewardTokenAddress, address _newOwner) {
         rewardToken = ERC20(_rewardTokenAddress);
         _transferOwnership(_newOwner);
@@ -195,6 +205,15 @@ contract MPROStake is Ownable, Pausable {
         return pending;
     }
 
+    /**
+     * @dev Stakes tokens for a specific staker.
+     *
+     * This function allows the contract owner to stake tokens for a specific staker. It verifies the validity of the stake period, ensures that the staker's balance is greater than zero, and calculates the amount to stake based on the staker's address and the specified amount. If the staker's balance is zero, the function returns zero. Otherwise, it calculates the amount to stake, updates the staker's information, and returns the staked amount.
+     *
+     * @param _wallet The address of the staker.
+     * @param _amount The amount of tokens to stake.
+     * @return uint256 The staked amount.
+     */
     function stake(address _wallet, uint256 _amount) private returns (uint256) {
         Staker storage _staker = staker[_wallet];
         _staker.staked += _amount;
@@ -236,6 +255,11 @@ contract MPROStake is Ownable, Pausable {
             );
     }
 
+    /**
+     * @dev Updates the pool.
+     *
+     * This function updates the pool by calculating the multiplier for timestamps and the reward token reward. It then updates the accumulated reward per share based on the reward token reward and the total staked supply. If the current timestamp is less than or equal to the last reward timestamp, the function returns without updating the pool. If the total staked supply is zero, the function returns without updating the pool. Otherwise, it calculates the multiplier for timestamps and the reward token reward, updates the accumulated reward per share, and sets the last reward timestamp to the current timestamp.
+     */
     function updatePool() public {
         if (block.timestamp <= lastRewardTimestamp) {
             return;
@@ -256,6 +280,15 @@ contract MPROStake is Ownable, Pausable {
         lastRewardTimestamp = block.timestamp;
     }
 
+    /**
+     * @dev Retrieves the multiplier for timestamps.
+     *
+     * This function calculates and returns the multiplier for timestamps based on the start and end timestamps of the stake period. If the end timestamp is less than or equal to the specified timestamp, the function returns the difference between the two timestamps. If the start timestamp is greater than or equal to the specified timestamp, the function returns zero. Otherwise, it returns the difference between the end timestamp and the specified timestamp.
+     *
+     * @param _from The start timestamp.
+     * @param _to The end timestamp.
+     * @return uint256 The multiplier for timestamps.
+     */
     function getMultiplierForTimestamps(
         uint256 _from,
         uint256 _to
@@ -304,6 +337,14 @@ contract MPROStake is Ownable, Pausable {
         return staker[_account].reward;
     }
 
+    /**
+     * @dev Retrieves the claimed balance for a specific staker.
+     *
+     * This function returns the claimed balance for a specific staker based on their account address.
+     *
+     * @param _account The address of the staker.
+     * @return uint256 The claimed balance.
+     */
     function getWalletStakeUpdates(
         address _account
     ) public view returns (StakeUpdate[] memory) {
@@ -317,7 +358,7 @@ contract MPROStake is Ownable, Pausable {
      *
      * @param _amount The amount of reward tokens to be added.
      */
-    function updateReward(uint256 _amount) public onlyOwner {
+    function updateReward(uint256 _amount) public onlyWhitelistedUpdaters {
         require(
             stakeStartTimestamp > 0 && stakeEndTimestamp > 0,
             "Invalid stake period config"
@@ -372,11 +413,13 @@ contract MPROStake is Ownable, Pausable {
             claimRewardStartTimestamp == 0 ||
             block.timestamp < claimRewardStartTimestamp
         ) return (false, "Claim period has not started", 0);
+        uint256 stakedSupply = totalStakedSupply;
         updatePool();
         Staker storage _staker = staker[_stakerAddress];
         // Update remaining balance to claim
         if (pendingReward(_stakerAddress) > 0) {
             uint256 reward = stakeReward(_stakerAddress);
+            stakedSupply += reward;
             rewardTokenQuantity -= reward;
         }
 
@@ -390,6 +433,9 @@ contract MPROStake is Ownable, Pausable {
         _staker.claimedBalance += tokensEnableToTransfer;
         rewardToken.transfer(_msgSender(), tokensEnableToTransfer);
 
+        stakedSupply -= tokensEnableToTransfer;
+        totalStakedSupply = stakedSupply;
+
         _staker.rewardDebt = getAmountByWallet(_stakerAddress)
             .mul(accRewardTokenPerShare)
             .div(1e18);
@@ -401,9 +447,17 @@ contract MPROStake is Ownable, Pausable {
         );
     }
 
+    /**
+     * @dev Retrieves the staked amount for a specific staker.
+     *
+     * This function returns the staked amount for a specific staker based on their account address.
+     *
+     * @param wallet The address of the staker.
+     * @return uint256 The staked amount.
+     */
     function getAmountByWallet(address wallet) private view returns (uint256) {
         Staker storage _staker = staker[wallet];
-        return _staker.balanceWithRewards;
+        return _staker.balanceWithRewards.sub(_staker.claimedBalance);
     }
 
     /**
@@ -417,12 +471,13 @@ contract MPROStake is Ownable, Pausable {
                 block.timestamp >= claimRewardStartTimestamp,
             "MPRORewardStake: Claim period has not started"
         );
+        uint256 stakedSupply = totalStakedSupply;
         updatePool();
         Staker storage _staker = staker[_msgSender()];
         // Update remaining balance to claim
         if (pendingReward(_msgSender()) > 0) {
             uint256 reward = stakeReward(_msgSender());
-            totalStakedSupply += reward;
+            stakedSupply += reward;
             rewardTokenQuantity -= reward;
         }
         uint256 tokensEnableForRelease = enableForRelease();
@@ -439,6 +494,9 @@ contract MPROStake is Ownable, Pausable {
         );
         _staker.claimedBalance += tokensEnableForRelease;
         rewardToken.transfer(_msgSender(), tokensEnableForRelease);
+
+        stakedSupply -= tokensEnableForRelease;
+        totalStakedSupply = stakedSupply;
 
         _staker.rewardDebt = getAmountByWallet(_msgSender())
             .mul(accRewardTokenPerShare)
@@ -484,6 +542,13 @@ contract MPROStake is Ownable, Pausable {
         }
     }
 
+    /**
+     * @dev Retrieves the next release allocation.
+     *
+     * This function calculates and returns the next release allocation based on the current timestamp and the claim reward start timestamp. If the current timestamp is greater than or equal to the claim reward start timestamp, it retrieves the staker's information and calculates the percent to claim based on the current cycle. It then calculates the claimable tokens based on the staker's balance with rewards and claimed balance. If the claimable tokens are greater than the balance with rewards, it sets the claimable tokens to the balance with rewards. If the claim configuration is not set, it allows claiming all tokens. If the conditions are not met, it returns zero.
+     *
+     * @return uint256 The next release allocation.
+     */
     function nextReleaseAllocation() public view returns (uint256) {
         if (block.timestamp >= claimRewardStartTimestamp) {
             Staker memory _staker = staker[_msgSender()];
@@ -516,6 +581,13 @@ contract MPROStake is Ownable, Pausable {
         }
     }
 
+    /**
+     * @dev Retrieves the next release timestamp.
+     *
+     * This function calculates and returns the next release timestamp based on the current timestamp and the claim reward start timestamp. If the current timestamp is less than the claim reward start timestamp, it returns the claim reward start timestamp. Otherwise, it calculates the reward cycle and returns the next release timestamp.
+     *
+     * @return uint256 The next release timestamp.
+     */
     function nextReleaseTimestamp() public view returns (uint256) {
         if (block.timestamp < claimRewardStartTimestamp) {
             return claimRewardStartTimestamp;
@@ -531,6 +603,9 @@ contract MPROStake is Ownable, Pausable {
         }
     }
 
+    /**
+     * @dev Retrieves the percent of tokens to claim for the current cycle.
+     */
     function getCyclePercentToClaim(
         uint256 _cyclesToAdd
     ) private view returns (uint256) {
@@ -563,12 +638,51 @@ contract MPROStake is Ownable, Pausable {
     }
 
     /**
+     * @dev Withdraws emergency reward tokens from the contract.
+     */
+    function emergencyRewardWithdrawal() public onlyOwner {
+        updatePool();
+        rewardToken.transferFrom(
+            address(this),
+            msg.sender,
+            rewardTokenQuantity
+        );
+        rewardTokenQuantity -= rewardTokenQuantity;
+        accRewardTokenQuantity -= rewardTokenQuantity;
+        uint256 remainingStakeTime = stakeEndTimestamp - block.timestamp;
+        if (block.timestamp < stakeStartTimestamp) {
+            remainingStakeTime = stakeEndTimestamp - stakeStartTimestamp;
+        }
+
+        if (
+            lastUpdateRewardTimestamp > 0 &&
+            block.timestamp > stakeStartTimestamp
+        ) {
+            distributedReward += rewardPerSecond.mul(
+                block.timestamp - lastUpdateRewardTimestamp
+            );
+        }
+
+        rewardPerSecond =
+            (accRewardTokenQuantity - distributedReward) /
+            remainingStakeTime;
+
+        if (block.timestamp > stakeStartTimestamp) {
+            lastUpdateRewardTimestamp = block.timestamp;
+        } else {
+            lastUpdateRewardTimestamp = stakeStartTimestamp;
+        }
+    }
+
+    /**
      * @dev Sets the stake configuration parameters.
      *
      * This function allows the contract owner to set the stake configuration parameters including the start and end timestamps for staking and declaration periods.
      *
      * @param _stakeStartTimestamp The start timestamp for the stake period.
      * @param _stakeEndTimestamp The end timestamp for the stake period.
+     * @param _updateStakersStartTimestamp The start timestamp for the updating period.
+     * @param _updateStakersEndTimestamp The end timestamp for the updating period.
      * @param _declarationStartTimestamp The start timestamp for the declaration period.
      * @param _declarationEndTimestamp The end timestamp for the declaration period.
      */
@@ -595,14 +709,12 @@ contract MPROStake is Ownable, Pausable {
                 _declarationEndTimestamp > block.timestamp,
             "MPRORewardStake: Invalid stake configuration - timestamps should be in the future"
         );
-        if (stakeStartTimestamp > 0) {
-            require(
-                block.timestamp < stakeStartTimestamp,
-                "MPRORewardStake: Stake period has started"
-            );
+
+        // Check if the stake start timestamp is greater than the current timestamp
+        if (stakeStartTimestamp == 0 || block.timestamp < stakeStartTimestamp) {
+            stakeStartTimestamp = _stakeStartTimestamp;
+            stakeEndTimestamp = _stakeEndTimestamp;
         }
-        stakeStartTimestamp = _stakeStartTimestamp;
-        stakeEndTimestamp = _stakeEndTimestamp;
         updateStakersStartTimestamp = _updateStakersStartTimestamp;
         updateStakersEndTimestamp = _updateStakersEndTimestamp;
         declarationStartTimestamp = _declarationStartTimestamp;
@@ -653,11 +765,11 @@ contract MPROStake is Ownable, Pausable {
         return x <= y ? x : y;
     }
 
-    function pause() public onlyOwner {
+    function pause() public onlyWhitelistedUpdaters {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public onlyWhitelistedUpdaters {
         _unpause();
     }
 }

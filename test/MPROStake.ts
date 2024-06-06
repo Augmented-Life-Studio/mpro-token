@@ -310,7 +310,7 @@ describe('MPRORewardStake', function () {
 			const currentBlock = await ethers.provider.getBlock('latest')
 			const currentTimestamp = currentBlock?.timestamp || 0
 			const MPRORewardStakeFactory = (await ethers.getContractFactory(
-				'contracts/MPRORewardStake.sol:MPRORewardStake',
+				'contracts/MPROStake.sol:MPROStake',
 			)) as MPROStake__factory
 			const newMproRewardStake = await MPRORewardStakeFactory.connect(
 				deployer,
@@ -711,7 +711,7 @@ describe('MPRORewardStake', function () {
 	describe('setStakeConfig() function', () => {
 		it('Should set stake config properly', async () => {
 			const MPRORewardStakeFactory = (await ethers.getContractFactory(
-				'contracts/MPRORewardStake.sol:MPRORewardStake',
+				'contracts/MPROStake.sol:MPROStake',
 			)) as MPROStake__factory
 			const newMproRewardStake = await MPRORewardStakeFactory.connect(
 				deployer,
@@ -885,7 +885,9 @@ describe('MPRORewardStake', function () {
 		it('Should return error when trying to pause contract by not owner', async () => {
 			await expect(
 				mproRewardStake.connect(stakers[0]).pause(),
-			).to.be.revertedWith('Ownable: caller is not the owner')
+			).to.be.revertedWith(
+				'MPRORewardStake: Address is not whitelisted updater',
+			)
 		})
 	})
 
@@ -899,7 +901,9 @@ describe('MPRORewardStake', function () {
 			await mproRewardStake.connect(owner).pause()
 			await expect(
 				mproRewardStake.connect(stakers[0]).unpause(),
-			).to.be.revertedWith('Ownable: caller is not the owner')
+			).to.be.revertedWith(
+				'MPRORewardStake: Address is not whitelisted updater',
+			)
 		})
 	})
 

@@ -6,9 +6,9 @@ import {BigNumber} from '@ethersproject/bignumber'
 import {
 	MPRORewardStake,
 	MPRORewardStake__factory,
-	MPROStake__factory,
 	MPROTest,
 	MPROTest__factory,
+	MockedMPROStake__factory,
 } from '../typechain-types'
 
 // npx hardhat test test/MPRORewardStake.ts
@@ -56,7 +56,7 @@ describe('MPRORewardStake', function () {
 		mproToken = await MPROTestFactory.deploy()
 
 		const MPRORewardStakeFactory = (await ethers.getContractFactory(
-			'contracts/MPRORewardStake.sol:MPRORewardStake',
+			'contracts/MPRORewardStake.sol:MPRORewardStakeDepreciated',
 		)) as MPRORewardStake__factory
 
 		mproRewardStake = await MPRORewardStakeFactory.connect(deployer).deploy(
@@ -563,8 +563,8 @@ describe('MPRORewardStake', function () {
 	describe('moveToStake() function', function () {
 		it('Should move tokens to stake contract', async function () {
 			const newStakeFactory = (await ethers.getContractFactory(
-				'contracts/mocks/MPROStake.sol:MPROStake',
-			)) as MPROStake__factory
+				'contracts/mocks/MockedMPROStake.sol:MockedMPROStake',
+			)) as MockedMPROStake__factory
 			const mproStake = await newStakeFactory.connect(deployer).deploy()
 			await mproRewardStake
 				.connect(owner)
@@ -596,8 +596,8 @@ describe('MPRORewardStake', function () {
 		})
 		it('Should fail when stake contract is not whitelisted', async function () {
 			const newStakeFactory = (await ethers.getContractFactory(
-				'contracts/mocks/MPROStake.sol:MPROStake',
-			)) as MPROStake__factory
+				'contracts/mocks/MockedMPROStake.sol:MockedMPROStake',
+			)) as MockedMPROStake__factory
 			const mproStake = await newStakeFactory.connect(deployer).deploy()
 			await mproRewardStake
 				.connect(owner)
@@ -609,8 +609,8 @@ describe('MPRORewardStake', function () {
 		})
 		it('Should return error when fire before claiming period', async function () {
 			const newStakeFactory = (await ethers.getContractFactory(
-				'contracts/mocks/MPROStake.sol:MPROStake',
-			)) as MPROStake__factory
+				'contracts/mocks/MockedMPROStake.sol:MockedMPROStake',
+			)) as MockedMPROStake__factory
 			const mproStake = await newStakeFactory.connect(deployer).deploy()
 			await mproRewardStake
 				.connect(owner)
@@ -626,8 +626,8 @@ describe('MPRORewardStake', function () {
 		})
 		it('Should return error when contract is poused', async function () {
 			const newStakeFactory = (await ethers.getContractFactory(
-				'contracts/mocks/MPROStake.sol:MPROStake',
-			)) as MPROStake__factory
+				'contracts/mocks/MockedMPROStake.sol:MockedMPROStake',
+			)) as MockedMPROStake__factory
 			const mproStake = await newStakeFactory.connect(deployer).deploy()
 			await mproRewardStake
 				.connect(owner)
@@ -646,8 +646,8 @@ describe('MPRORewardStake', function () {
 		})
 		it("Should return error when staker doesn't have enough tokens", async function () {
 			const newStakeFactory = (await ethers.getContractFactory(
-				'contracts/mocks/MPROStake.sol:MPROStake',
-			)) as MPROStake__factory
+				'contracts/mocks/MockedMPROStake.sol:MockedMPROStake',
+			)) as MockedMPROStake__factory
 			const mproStake = await newStakeFactory.connect(deployer).deploy()
 			await mproRewardStake
 				.connect(owner)
@@ -663,8 +663,8 @@ describe('MPRORewardStake', function () {
 		})
 		it('Should return error on transferStake when we provide wrong stake contract address', async function () {
 			const newStakeFactory = (await ethers.getContractFactory(
-				'contracts/mocks/MPROStake.sol:MPROStake',
-			)) as MPROStake__factory
+				'contracts/mocks/MockedMPROStake.sol:MockedMPROStake',
+			)) as MockedMPROStake__factory
 			const mproStake = await newStakeFactory.connect(deployer).deploy()
 			await mproRewardStake
 				.connect(owner)
