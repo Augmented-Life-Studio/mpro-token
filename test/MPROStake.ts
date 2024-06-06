@@ -1434,7 +1434,7 @@ describe('MPRORewardStake', function () {
 		})
 	})
 
-	describe.only('Testing claiming before stake ends', () => {
+	describe('Testing claiming before stake ends', () => {
 		it('Allow to claim reward before stake ends', async function () {
 			const MPRORewardStakeFactory = (await ethers.getContractFactory(
 				'contracts/MPROStake.sol:MPROStake',
@@ -1491,16 +1491,12 @@ describe('MPRORewardStake', function () {
 
 			await newMproRewardStake.connect(localStakers[0]).claim()
 
-			const pending = await newMproRewardStake.pendingReward(
-				localStakers[0].address,
-			)
-
 			const stakerData = await newMproRewardStake.staker(
 				localStakers[0].address,
 			)
 
 			console.log('====================================')
-			console.log('pending', pending.toString(), stakerData)
+			console.log('pending', stakerData)
 			console.log('====================================')
 
 			await network.provider.send('evm_increaseTime', [500])

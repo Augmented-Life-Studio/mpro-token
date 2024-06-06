@@ -179,8 +179,7 @@ contract MPROStake is Ownable, Pausable {
 
     function stakeReward(address _wallet) private returns (uint256) {
         Staker storage _staker = staker[_wallet];
-        uint256 pending = _staker
-            .balanceWithRewards
+        uint256 pending = getAmountByWallet(_wallet)
             .mul(accRewardTokenPerShare)
             .div(1e18)
             .sub(_staker.rewardDebt);
@@ -404,7 +403,7 @@ contract MPROStake is Ownable, Pausable {
 
     function getAmountByWallet(address wallet) private view returns (uint256) {
         Staker storage _staker = staker[wallet];
-        return _staker.balanceWithRewards.sub(_staker.claimedBalance);
+        return _staker.balanceWithRewards;
     }
 
     /**
@@ -423,6 +422,7 @@ contract MPROStake is Ownable, Pausable {
         // Update remaining balance to claim
         if (pendingReward(_msgSender()) > 0) {
             uint256 reward = stakeReward(_msgSender());
+            totalStakedSupply += reward;
             rewardTokenQuantity -= reward;
         }
         uint256 tokensEnableForRelease = enableForRelease();
