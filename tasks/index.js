@@ -43,3 +43,5 @@ task(
 	'getting befeficiaries by owner',
 	require('./getBeneficiaries'),
 ).addParam('contract', 'contract to get from')
+
+task('setLister', 'getting befeficiaries by owner', require('./setLister'))

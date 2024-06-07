@@ -7,6 +7,7 @@ import '@nomiclabs/hardhat-web3'
 import 'hardhat-deploy-ethers'
 import './tasks/index'
 import 'solidity-coverage'
+import '@nomicfoundation/hardhat-verify'
 
 const {
 	bscscanApiKey,
@@ -40,11 +41,11 @@ const config: HardhatUserConfig = {
 	namedAccounts: {
 		// Account used for deployment
 		deployer: {
-			default: 0, // wallet address 0, of the mnemonic in .env
+			default: '0x6eE701DE9e3d118c0553Ff45f84179614eb31161', // wallet address 0, of the mnemonic in .env
 		},
 		// Owner of the contract
 		owner: {
-			default: '0x03A1b656565E7c20aA4fadD4338f5Fa73585a62b', // wallet address 0, of the mnemonic in .env
+			default: '0x6eE701DE9e3d118c0553Ff45f84179614eb31161', // wallet address 0, of the mnemonic in .env
 		},
 		// Treasury address
 		treasury: {
@@ -184,6 +185,7 @@ const config: HardhatUserConfig = {
 			sepolia: ethApiKey,
 			arbitrum: arbiApiKey,
 			arbitrumSepolia: arbiApiKey,
+			arbitrumOne: arbiApiKey,
 			base: baseApiKey,
 			baseSepolia: baseApiKey,
 		},

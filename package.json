@@ -12,7 +12,7 @@
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "dotenv": "^16.3.1",
     "ethers": "6.12.0",
-    "hardhat": "2.22.2",
+    "hardhat": "2.22.3",
     "hardhat-deploy": "^0.11.45",
     "hardhat-deploy-ethers": "^0.4.1",
     "typescript": "^5.3.3"
@@ -23,6 +23,7 @@
     "@layerzerolabs/solidity-examples": "^1.1.0",
     "@layerzerolabs/test-devtools-evm-hardhat": "^0.2.2",
     "@layerzerolabs/toolbox-hardhat": "^0.2.13",
+    "@nomicfoundation/hardhat-verify": "^2.0.6",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/contracts": "^4.8.1"
   },

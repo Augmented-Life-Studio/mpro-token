@@ -1,15 +1,16 @@
 import CHAIN_ID from '../constants/chainIds.json'
-import { getDeploymentAddresses } from '../utils/readStatic'
-import { MPRO } from "../typechain-types"
-import { ethers } from 'ethers'
+import {getDeploymentAddresses} from '../utils/readStatic'
+import {MPRO} from '../typechain-types'
+import {ethers} from 'ethers'
 
 const zeroPad = (data: string, length: number): Uint8Array => {
-	return ethers.getBytes(ethers.zeroPadValue(data, length), "hex")
+	return ethers.getBytes(ethers.zeroPadValue(data, length), 'hex')
 }
 
 module.exports = async function (taskArgs: any, hre: any) {
 	let localContract, remoteContract
-	const { owner } = await hre.getNamedAccounts()
+	const {owner} = await hre.getNamedAccounts()
+	console.log(owner)
 
 	const helperSigner = await hre.ethers.getSigner(owner)
 
@@ -21,8 +22,7 @@ module.exports = async function (taskArgs: any, hre: any) {
 		remoteContract = taskArgs.remoteContract
 	}
 
-	console.log('localContract:', localContract, helperSigner.address);
-
+	console.log('localContract:', localContract, helperSigner.address)
 
 	if (!localContract || !remoteContract) {
 		console.log(
@@ -32,7 +32,9 @@ module.exports = async function (taskArgs: any, hre: any) {
 	}
 
 	// get local contract
-	const localContractInstance: MPRO = await hre.ethers.getContract(localContract)
+	const localContractInstance: MPRO = await hre.ethers.getContract(
+		localContract,
+	)
 
 	// get deployed remote contract address
 	const remoteAddress = getDeploymentAddresses(taskArgs.targetNetwork)[
@@ -40,11 +42,10 @@ module.exports = async function (taskArgs: any, hre: any) {
 	]
 
 	// get remote chain id
-	const remoteChainId = CHAIN_ID[taskArgs.targetNetwork as keyof typeof CHAIN_ID]
+	const remoteChainId =
+		CHAIN_ID[taskArgs.targetNetwork as keyof typeof CHAIN_ID]
 
-	const peer = zeroPad(
-		remoteAddress, 32
-	);
+	const peer = zeroPad(remoteAddress, 32)
 
 	// check if pathway is already set
 	const isTrustedRemoteSet = await localContractInstance.isPeer(
@@ -54,27 +55,24 @@ module.exports = async function (taskArgs: any, hre: any) {
 
 	if (!isTrustedRemoteSet) {
 		try {
-			let tx = await localContractInstance.connect(helperSigner).setPeer(
-				remoteChainId,
-				peer,
-			)
+			let tx = await localContractInstance
+				.connect(helperSigner)
+				.setPeer(remoteChainId, peer)
 
-			console.log(tx);
+			console.log(tx)
 
 			const transaction = await tx.getTransaction()
 			console.log(` tx: ${transaction?.hash}`)
 		} catch (e: any) {
-			console.log('====================================');
-			console.log(e);
-			console.log('====================================');
+			console.log('====================================')
+			console.log(e)
+			console.log('====================================')
 			if (
 				e.error.message.includes('The chainId + address is already trusted')
 			) {
 				console.log('*source already set*')
 			} else {
-				console.log(
-					`❌ [${hre.network.name}] setPeer(${remoteChainId})`,
-				)
+				console.log(`❌ [${hre.network.name}] setPeer(${remoteChainId})`)
 			}
 		}
 	} else {
