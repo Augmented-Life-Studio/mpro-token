@@ -1,0 +1,21 @@
+{
+  "cycleId": "d75c0a7b-55b5-40b1-a9a9-507bf4aacf31",
+  "stakers": [
+    {
+      "walletAddress": "0x767e5c2359e7c809b16d8cffdb9464f91b6c970b",
+      "reward": 2125.92305,
+      "txHash": "111"
+    },
+    {
+      "walletAddress": "0x69927ef5c1f35333658a6b4de7307f617b6016cf",
+      "reward": 0,
+      "txHash": "111"
+    },
+    {
+      "walletAddress": "0xa7f47ef7374bba82ea86318292f6ad53266bc94b",
+      "reward": 974.14985,
+      "txHash": "111"
+    }
+  ],
+  "amount": 3100.0729
+}

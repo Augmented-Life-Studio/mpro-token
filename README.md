@@ -124,3 +124,5 @@ npx hardhat --network ethereum getBeneficiaries --contract AirdropVestingTwo
 
 npx hardhat --network base getContractInfo
 npx hardhat --network base updateReward
+npx hardhat --network base updateStakers --distribution-tx "lol2" --bridge-tx "lol" --cycle-id "d75c0a7b-55b5-40b1-a9a9-507bf4aacf31"
+```
