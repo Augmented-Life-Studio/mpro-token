@@ -48,9 +48,9 @@ module.exports = async function ({
 		currentTimestamp, // _stakeStartTimestamp
 		currentTimestamp + 62 * 24 * 60 * 60, // _stakeEndTimestamp
 		currentTimestamp, // _updateStakersStartTimestamp
-		currentTimestamp + 46 * 24 * 60 * 60, // _updateStakersEndTimestamp
+		currentTimestamp + 46 * 24 * 60 * 60 + 8 * 60 * 60, // _updateStakersEndTimestamp
 		currentTimestamp, // _declarationStartTimestamp
-		currentTimestamp + 45 * 24 * 60 * 60, // _declarationEndTimestamp
+		currentTimestamp + 45 * 24 * 60 * 60 - 2 * 60 * 60, // _declarationEndTimestamp
 	)
 	await tx.wait()
 	console.log(`Stake config set in tx: ${tx.hash}`)
