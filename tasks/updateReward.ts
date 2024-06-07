@@ -12,19 +12,29 @@ const REWARD_VALUE = '700000'
 module.exports = async function (taskArgs: any, hre: any) {
 	let localContract, remoteContract
 	const {owner} = await hre.getNamedAccounts()
-	console.log(owner)
 
 	const helperSigner = await hre.ethers.getSigner(owner)
 
 	const stakeAddress = getDeploymentAddresses(hre.network.name)['MPROAutoStake']
 
-	const contract = await hre.ethers.getContractAt(
+	const mproToken = (await hre.ethers.getContractAt(
+		'MPRO',
+		getDeploymentAddresses(hre.network.name)['MPROLight'],
+	)) as MPRO
+
+	const stakeContarct = await hre.ethers.getContractAt(
 		'contracts/MPROStake.sol:MPROAutoStake',
 		stakeAddress,
 	)
 
 	try {
-		let tx = await contract
+		let tx
+		tx = await mproToken
+			.connect(helperSigner)
+			.increaseAllowance(stakeAddress, ethers.parseEther(REWARD_VALUE))
+		await tx.wait()
+
+		tx = await stakeContarct
 			.connect(helperSigner)
 			.updateReward(ethers.parseEther(REWARD_VALUE))
 
