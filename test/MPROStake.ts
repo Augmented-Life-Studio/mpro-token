@@ -1517,4 +1517,79 @@ describe('MPRORewardStake', function () {
 			console.log('====================================')
 		})
 	})
+
+	describe.only('Prod flow', () => {
+		it('Allow to claim reward before stake ends', async function () {
+			const MPRORewardStakeFactory = (await ethers.getContractFactory(
+				'contracts/MPROStake.sol:MPROAutoStake',
+			)) as MPROAutoStake__factory
+
+			const newMproRewardStake = await MPRORewardStakeFactory.connect(
+				deployer,
+			).deploy(
+				mproToken.target, // MPRO token address
+				owner.address, // New contract owner
+			)
+			stakeStartTimestamp =
+				((await ethers.provider.getBlock('latest'))!.timestamp as number) + 100 // To make sure that the value is in the future
+			stakeEndTimestamp = stakeStartTimestamp + stakeDuration
+			await newMproRewardStake.connect(owner).setStakeConfig(
+				stakeStartTimestamp, // Stake start timestamp
+				stakeEndTimestamp, // Stake end timestamp,
+				stakeStartTimestamp, // Update stakers start timestamp
+				stakeEndTimestamp, // Update stakers end timestamp,
+				stakeStartTimestamp, // Declaration start timestamp,
+				stakeStartTimestamp + declarationDuration, // Declaration end timestamp,
+			)
+
+			await newMproRewardStake
+				.connect(owner)
+				.setClaimRewardConfig(stakeEndTimestamp - 500, 100, 2000)
+			mproToken
+				.connect(owner)
+				.increaseAllowance(newMproRewardStake.target, ethers.MaxUint256)
+			await mproToken
+				.connect(owner)
+				.distibute(owner.address, ethers.parseEther('99999999'))
+
+			const currentBlockTimestamp = (await (await ethers.provider.getBlock(
+				'latest',
+			))!.timestamp) as number
+			const diffToStakeStart = stakeStartTimestamp - currentBlockTimestamp - 1
+			console.log('====================================')
+			console.log(diffToStakeStart)
+			console.log('====================================')
+			await network.provider.send('evm_increaseTime', [diffToStakeStart])
+			await mine()
+
+			await network.provider.send('evm_increaseTime', [500])
+			await mine()
+
+			await newMproRewardStake
+				.connect(owner)
+				.updateReward(ethers.parseEther('1000'))
+
+			const localStakers = getDefinedStakersAmount(stakers, 1)
+
+			await newMproRewardStake.connect(owner).updateStakers(
+				localStakers.map(el => el.address),
+				localStakers.map(() => ethers.parseEther('1')),
+			)
+
+			await network.provider.send('evm_increaseTime', [500])
+			await mine()
+
+			const stakerData = await newMproRewardStake.staker(
+				localStakers[0].address,
+			)
+
+			const pendingReward = await newMproRewardStake.pendingReward(
+				localStakers[0].address,
+			)
+
+			console.log('====================================')
+			console.log(stakerData, pendingReward)
+			console.log('====================================')
+		})
+	})
 })

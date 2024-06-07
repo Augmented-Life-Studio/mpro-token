@@ -121,3 +121,6 @@ npx hardhat --network ethereum getBeneficiaries --contract AdvisiorsVesting
 npx hardhat --network ethereum getBeneficiaries --contract MarketingVesting
 npx hardhat --network ethereum getBeneficiaries --contract AirdropVestingOne
 npx hardhat --network ethereum getBeneficiaries --contract AirdropVestingTwo
+
+npx hardhat --network base getContractInfo
+npx hardhat --network base updateReward
