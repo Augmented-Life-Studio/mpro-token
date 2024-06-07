@@ -38,7 +38,7 @@ module.exports = async function ({
 	console.log('MPROStake deployed to:', mproRewardStake.address)
 
 	const mproStake = await ethers.getContractAt(
-		`MPRORewardStake`,
+		`MPROAutoStake`,
 		mproRewardStake.address,
 	)
 
