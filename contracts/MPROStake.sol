@@ -94,6 +94,13 @@ contract MPROAutoStake is Ownable, Pausable {
         _;
     }
 
+    event UpdateStakers(uint256 _updatedStakeAmount);
+    event StakeReward(address _staker, uint256 _rewardAmount);
+    event Stake(address _staker, uint256 _stakeAmount);
+    event MoveToStake(address _staker, address _stake, uint256 _amount);
+    event Claim(address _staker, uint256 _amount);
+    event UpdateReward(uint256 _amount, uint256 _rewardPerSecond);
+
     /**
      * @dev Initializes the MPROStake contract.
      *
@@ -185,6 +192,7 @@ contract MPROAutoStake is Ownable, Pausable {
         // Update total staked supply increased by pending rewards
         rewardTokenQuantity -= rewardedAmountToUpdate;
         totalStakedSupply += stakedAmountToUpdate;
+        emit UpdateStakers(stakedAmountToUpdate);
     }
 
     function stakeReward(address _wallet) private returns (uint256) {
@@ -202,6 +210,7 @@ contract MPROAutoStake is Ownable, Pausable {
             .mul(accRewardTokenPerShare)
             .div(1e18);
 
+        emit StakeReward(_wallet, pending);
         return pending;
     }
 
@@ -223,6 +232,7 @@ contract MPROAutoStake is Ownable, Pausable {
             .mul(accRewardTokenPerShare)
             .div(1e18);
 
+        emit Stake(_wallet, _amount);
         return _amount;
     }
 
@@ -391,6 +401,8 @@ contract MPROAutoStake is Ownable, Pausable {
         } else {
             lastUpdateRewardTimestamp = stakeStartTimestamp;
         }
+
+        emit UpdateReward(_amount, rewardPerSecond);
     }
 
     /**
@@ -439,6 +451,8 @@ contract MPROAutoStake is Ownable, Pausable {
         _staker.rewardDebt = getAmountByWallet(_stakerAddress)
             .mul(accRewardTokenPerShare)
             .div(1e18);
+
+        emit MoveToStake(_stakerAddress, _msgSender(), tokensEnableToTransfer);
 
         return (
             true,
@@ -501,6 +515,8 @@ contract MPROAutoStake is Ownable, Pausable {
         _staker.rewardDebt = getAmountByWallet(_msgSender())
             .mul(accRewardTokenPerShare)
             .div(1e18);
+
+        emit Claim(_msgSender(), tokensEnableForRelease);
     }
 
     /**

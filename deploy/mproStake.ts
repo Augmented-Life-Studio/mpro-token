@@ -42,7 +42,7 @@ module.exports = async function ({
 		mproRewardStake.address,
 	)
 
-	const currentTimestamp = Math.floor(Date.now() / 1000)
+	const currentTimestamp = Math.floor(Date.now() / 1000) + 10 // 10 seconds in the future
 
 	tx = await mproStake.setStakeConfig(
 		currentTimestamp, // _stakeStartTimestamp
