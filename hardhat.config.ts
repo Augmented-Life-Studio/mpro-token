@@ -90,7 +90,7 @@ const config: HardhatUserConfig = {
 			accounts: accounts('ethereum'),
 		},
 		base: {
-			url: 'https://base.llamarpc.com',
+			url: 'https://mainnet.base.org',
 			chainId: 8453,
 			accounts: accounts('base'),
 		},
