@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract MPROStake is Ownable, Pausable {
+contract MPROAutoStake is Ownable, Pausable {
     using SafeMath for uint256;
 
     // Unlock percent divider

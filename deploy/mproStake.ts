@@ -23,9 +23,7 @@ module.exports = async function ({
 
 	const netName = network.name
 
-	const deploymentAddresses = getDeploymentAddresses(netName)
-
-	const mproRewardStake = await deploy(`MPRORewardStake`, {
+	const mproRewardStake = await deploy(`MPROAutoStake`, {
 		from: deployer,
 		args: [
 			MPRO_TOKEN, //MPRO token address,
@@ -34,7 +32,7 @@ module.exports = async function ({
 		log: true,
 		waitConfirmations: 5,
 		skipIfAlreadyDeployed: true,
-		contract: 'contracts/MPROStake.sol:MPROStake',
+		contract: 'contracts/MPROStake.sol:MPROAutoStake',
 	})
 
 	console.log('MPROStake deployed to:', mproRewardStake.address)
@@ -50,12 +48,20 @@ module.exports = async function ({
 		currentTimestamp, // _stakeStartTimestamp
 		currentTimestamp + 62 * 24 * 60 * 60, // _stakeEndTimestamp
 		currentTimestamp, // _updateStakersStartTimestamp
-		currentTimestamp + 47 * 24 * 60 * 60, // _updateStakersEndTimestamp
+		currentTimestamp + 46 * 24 * 60 * 60, // _updateStakersEndTimestamp
 		currentTimestamp, // _declarationStartTimestamp
-		currentTimestamp + 46 * 24 * 60 * 60, // _declarationEndTimestamp
+		currentTimestamp + 45 * 24 * 60 * 60, // _declarationEndTimestamp
 	)
 	await tx.wait()
 	console.log(`Stake config set in tx: ${tx.hash}`)
+
+	tx = await mproStake.setClaimRewardConfig(
+		currentTimestamp + 62 * 24 * 60 * 60, // _claimRewardStartTimestamp
+		24 * 60 * 60, // _claimPeriodDuration
+		40, // _rewardUnlockPercentPerPeriod
+	)
+	await tx.wait()
+	console.log(`Claim reward config set in tx: ${tx.hash}`)
 }
 
-module.exports.tags = ['MPROStake']
+module.exports.tags = ['MPROAutoStake']
