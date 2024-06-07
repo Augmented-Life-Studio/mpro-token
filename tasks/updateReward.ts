@@ -18,7 +18,7 @@ module.exports = async function (taskArgs: any, hre: any) {
 	const stakeAddress = getDeploymentAddresses(hre.network.name)['MPROAutoStake']
 
 	const mproToken = (await hre.ethers.getContractAt(
-		'MPRO',
+		'contracts/MPROLight.sol:MPRO',
 		getDeploymentAddresses(hre.network.name)['MPROLight'],
 	)) as MPRO
 
@@ -43,6 +43,6 @@ module.exports = async function (taskArgs: any, hre: any) {
 		const transaction = await tx.getTransaction()
 		console.log(` tx: ${transaction?.hash}`)
 	} catch (e: any) {
-		console.log(`❌ [${hre.network.name}] updateReward`)
+		console.log(`❌ [${hre.network.name}] updateReward with error: ${e}`)
 	}
 }
