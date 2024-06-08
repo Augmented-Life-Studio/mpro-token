@@ -3,12 +3,6 @@ const fs = require('fs')
 import {getDeploymentAddresses} from '../utils/readStatic'
 import {MPRO} from '../typechain-types'
 
-// SUPER IMPORTANT TO UPDATE
-const CYCLE_ID = '2ab0676b-f3a6-4272-989d-7a29827a3170'
-const REWARD_DIST_TX_HASH = '0x0b1'
-const BRIDGE_TX_HASH = '0x0b2'
-// SUPER IMPORTANT TO UPDATE
-
 interface Staker {
 	walletAddress: string
 	reward: number
@@ -144,7 +138,10 @@ module.exports = async function (args: any, hre: any) {
 		})
 
 		const dbDataString = JSON.stringify(dbDataToPass, null, 2)
-		fs.writeFileSync(`./manualUpdateStakers/${CYCLE_ID}_db.json`, dbDataString)
+		fs.writeFileSync(
+			`./manualUpdateStakers/${args.cycleId}_db.json`,
+			dbDataString,
+		)
 	} else {
 		console.log(
 			`❌ [${hre.network.name}] Not all stakers updated, please run the task again`,
