@@ -84,7 +84,9 @@ module.exports = async function (args: any, hre: any) {
 		const stakersAddresses = chunkStakers.map(
 			(staker: any) => staker.walletAddress,
 		)
-		const stakersAmounts = chunkStakers.map((staker: any) => staker.reward)
+		const stakersAmounts = chunkStakers.map((staker: any) =>
+			ethers.parseEther(String(staker.reward)),
+		)
 
 		try {
 			const tx = await stakeContarct
