@@ -4,7 +4,7 @@ import {getDeploymentAddresses} from '../utils/readStatic'
 import {MPRO} from '../typechain-types'
 
 // SUPER IMPORTANT TO UPDATE
-const CYCLE_ID = 'd75c0a7b-55b5-40b1-a9a9-507bf4aacf31'
+const CYCLE_ID = '2ab0676b-f3a6-4272-989d-7a29827a3170'
 const REWARD_DIST_TX_HASH = '0x0b1'
 const BRIDGE_TX_HASH = '0x0b2'
 // SUPER IMPORTANT TO UPDATE
@@ -100,7 +100,7 @@ module.exports = async function (args: any, hre: any) {
 
 			const modifiedStakers = stakersData.stakers.map((staker: Staker) => {
 				if (stakersAddresses.includes(staker.walletAddress)) {
-					staker.txHash = '111'
+					staker.txHash = tx.hash
 				}
 				return staker
 			})
