@@ -64,7 +64,7 @@ module.exports = async function (args: any, hre: any) {
 			)
 			const tx = await mproToken
 				.connect(updaterSigner)
-				.increaseAllowance(stakeAddress, stakersData.amount)
+				.increaseAllowance(stakeAddress, amountToUpdate)
 			await tx.wait()
 		} catch (e: any) {
 			console.log(
