@@ -54,3 +54,11 @@ task('updateStakers', 'update stakers', require('./updateStakers'))
 	.addParam('cycleId', 'cycleID to update')
 	.addParam('distributionTx', 'Distribution TX hash')
 	.addParam('bridgeTx', 'Bridge txHash')
+
+task(
+	'distributeReward',
+	'Distriute reward to base',
+	require('./distributeReward'),
+)
+	.addParam('cycleId', 'cycleID to update')
+	.addParam('amount', 'Reward amount')
