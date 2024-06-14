@@ -25,7 +25,7 @@ module.exports = async function ({
 
 	const oftPlainToken = await deploy('OFTPlainToken', {
 		from: deployer,
-		args: [TOKEN_NAME, TOKEN_SYMBOL],
+		args: [TOKEN_NAME, TOKEN_SYMBOL, owner],
 		log: true,
 		waitConfirmations: 1,
 		skipIfAlreadyDeployed: true,

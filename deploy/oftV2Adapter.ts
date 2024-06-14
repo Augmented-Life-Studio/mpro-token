@@ -1,10 +1,10 @@
-import {LZ_ENDPOINTS} from '../constants/layerzeroEndpointsV1'
+import {LZ_ENDPOINTS} from '../constants/layerzeroEndpoints'
 import hre from 'hardhat'
 import {DeploymentsExtension} from 'hardhat-deploy/dist/types'
 import {verifyContractWithRetry} from '../utils/verifyContract'
 
-// npx hardhat deploy --tags OFTV1Adapter --network sepolia
-// npx hardhat deploy --tags OFTV1Adapter --network base-sepolia
+// npx hardhat deploy --tags OFTV2Adapter --network sepolia
+// npx hardhat deploy --tags OFTV2Adapter --network base-sepolia
 
 module.exports = async function ({
 	deployments,
@@ -23,7 +23,7 @@ module.exports = async function ({
 	const lzEndpointAddress =
 		LZ_ENDPOINTS[hre.network.name as keyof typeof LZ_ENDPOINTS]
 
-	const oftPlainToken = await deploy('OFTPlainTokenV1', {
+	const oftPlainToken = await deploy('OFTPlainTokenV2', {
 		from: deployer,
 		args: [TOKEN_NAME, TOKEN_SYMBOL, owner],
 		log: true,
@@ -40,22 +40,22 @@ module.exports = async function ({
 		oftPlainToken.args,
 	)
 
-	const oftV1Adapter = await deploy('OFTV1Adapter', {
+	const oftV2Adapter = await deploy('OFTV2Adapter', {
 		from: deployer,
 		args: [oftPlainToken.address, lzEndpointAddress, owner],
 		log: true,
 		waitConfirmations: 1,
 		skipIfAlreadyDeployed: true,
-		contract: 'contracts/mocks/OFTV1Adapter.sol:OFTV1Adapter',
+		contract: 'contracts/mocks/OFTV2Adapter.sol:OFTV2Adapter',
 	})
 
-	console.log('OFTV1Adapter deployed to:', oftV1Adapter)
+	console.log('OFTV2Adapter deployed to:', oftV2Adapter)
 
 	await verifyContractWithRetry(
-		'contracts/mocks/OFTV1Adapter.sol:OFTV1Adapter',
-		oftV1Adapter.address,
-		oftV1Adapter.args,
+		'contracts/mocks/OFTV2Adapter.sol:OFTV2Adapter',
+		oftV2Adapter.address,
+		oftV2Adapter.args,
 	)
 }
 
-module.exports.tags = ['OFTV1Adapter']
+module.exports.tags = ['OFTV2Adapter']
