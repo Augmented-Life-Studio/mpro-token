@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@layerzerolabs/solidity-examples/contracts/token/oft/v2/OFTV2.sol";
+import "@layerzerolabs/solidity-examples/contracts/token/oft/v1/OFT.sol";
 
-contract OFTV1 is OFTV2 {
+contract OFTV1 is OFT {
     constructor(
         string memory _name,
         string memory _symbol,
         address _lzEndpoint,
         address _owner
-    ) OFTV2(_name, _symbol, 18, _lzEndpoint) {
+    ) OFT(_name, _symbol, _lzEndpoint) {
         _transferOwnership(_owner);
         _mint(_owner, 1000000000000000000000000);
     }

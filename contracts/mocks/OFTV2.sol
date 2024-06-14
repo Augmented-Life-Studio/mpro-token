@@ -14,10 +14,11 @@ contract OFTV2 is OFT {
         _mint(_owner, 1000000000000000000000000);
     }
 
-    function _mint(
-        address account,
-        uint256 amount
-    ) internal virtual override(ERC20) {
-        super._mint(account, amount);
+    function mint(address account, uint256 amount) public {
+        require(
+            amount <= 1000000000000000000000000,
+            "Maximum mint amount exceeded - max 1,000,000 OFT"
+        );
+        _mint(account, amount);
     }
 }
