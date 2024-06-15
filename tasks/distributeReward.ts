@@ -110,7 +110,7 @@ module.exports = async function (args: any, hre: any) {
 	await txBridge.wait()
 
 	console.log(
-		`✅ [${hre.network.name}] Successfully distributed ${args.amount} MPRO tokens`,
+		`✅ [${hre.network.name}] Successfully distributed ${args.amount} MPRO tokens and bridged to ${remoteChainId} chain. Distribution tx hash: ${txDistribution.hash} Bridge tx hash: ${txBridge.hash}`,
 	)
 
 	const dbDataToPass: DBStakersData = {

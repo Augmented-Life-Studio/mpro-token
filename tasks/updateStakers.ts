@@ -106,6 +106,8 @@ module.exports = async function (args: any, hre: any) {
 				cycleId: stakersData.cycleId,
 				stakers: modifiedStakers,
 				amount: stakersData.amount,
+				rewardDistributionTxHash: stakersData.rewardDistributionTxHash,
+				bridgeTxHash: stakersData.bridgeTxHash,
 			}
 			const modifiedString = JSON.stringify(modifiedDocument, null, 2)
 			fs.writeFileSync(updateStakersCycleFile, modifiedString)
