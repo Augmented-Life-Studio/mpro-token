@@ -51,6 +51,9 @@ const config: HardhatUserConfig = {
 		treasury: {
 			default: '0x68E5CF81eb3c319e47006EAe067E04ebf6610204',
 		},
+		mproDistributor: {
+			default: '0x6eE701DE9e3d118c0553Ff45f84179614eb31161',
+		},
 	},
 	gasReporter: {
 		currency: 'USD',

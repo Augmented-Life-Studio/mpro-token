@@ -12,12 +12,14 @@ interface StakersData {
 	cycleId: string
 	stakers: Staker[]
 	amount: number
+	rewardDistributionTxHash?: string
+	bridgeTxHash?: string
 }
 
 interface DBStakersData {
 	cycleId: string
-	rewardDistributionTxHash: string
-	bridgeTxHash: string
+	rewardDistributionTxHash?: string
+	bridgeTxHash?: string
 	stakers: {
 		[key: string]: {walletAddress: string}[]
 	}
@@ -124,9 +126,8 @@ module.exports = async function (args: any, hre: any) {
 	if (allStakersUpdated) {
 		console.log(`✅ [${hre.network.name}] All stakers updated`)
 		const dbDataToPass: DBStakersData = {
+			...stakersData,
 			cycleId: currentStakersData.cycleId,
-			rewardDistributionTxHash: args.distributionTx,
-			bridgeTxHash: args.bridgeTx,
 			stakers: {},
 		}
 		currentStakersData.stakers.forEach((staker: Staker) => {

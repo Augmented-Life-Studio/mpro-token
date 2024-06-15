@@ -48,8 +48,8 @@ module.exports = async function (args: any, hre: any) {
 	const updateStakersCycleData = JSON.parse(
 		fs.readFileSync(updateStakersCycleFile, 'utf8'),
 	) as DBStakersData
-	const {owner} = await hre.getNamedAccounts() // Updated address
-	const ownerSigner = await hre.ethers.getSigner(owner)
+	const {mproDistributor} = await hre.getNamedAccounts() // Updated address
+	const ownerSigner = await hre.ethers.getSigner(mproDistributor)
 	const masterDistributorAddress = getDeploymentAddresses(hre.network.name)[
 		'MPROMasterDistributor'
 	]
@@ -80,7 +80,11 @@ module.exports = async function (args: any, hre: any) {
 	const remoteChainId = CHAIN_ID.base
 
 	// quote fee with default adapterParams
-	const sendParams = createSendParams(remoteChainId, owner, bigIntAmount)
+	const sendParams = createSendParams(
+		remoteChainId,
+		mproDistributor,
+		bigIntAmount,
+	)
 
 	let [nativeFee] = await mproToken.quoteSend(sendParams, false)
 
@@ -90,14 +94,14 @@ module.exports = async function (args: any, hre: any) {
 
 	const txDistribution = await masterDistributor
 		.connect(ownerSigner)
-		.distribute(owner, bigIntAmount)
+		.distribute(mproDistributor, bigIntAmount)
 
 	await txDistribution.wait()
 
 	// Bridge tokens
 	const txBridge = await mproToken
 		.connect(ownerSigner)
-		.send(sendParams, [nativeFee, zero] as any, owner, {
+		.send(sendParams, [nativeFee, zero] as any, mproDistributor, {
 			value: nativeFee,
 		})
 

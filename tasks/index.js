@@ -50,10 +50,10 @@ task('getContractInfo', 'getting contract info', require('./getContractInfo'))
 
 task('updateReward', 'update reward', require('./updateReward'))
 
-task('updateStakers', 'update stakers', require('./updateStakers'))
-	.addParam('cycleId', 'cycleID to update')
-	.addParam('distributionTx', 'Distribution TX hash')
-	.addParam('bridgeTx', 'Bridge txHash')
+task('updateStakers', 'update stakers', require('./updateStakers')).addParam(
+	'cycleId',
+	'cycleID to update',
+)
 
 task(
 	'distributeReward',
