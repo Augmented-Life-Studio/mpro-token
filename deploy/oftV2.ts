@@ -23,7 +23,7 @@ module.exports = async function ({
 	const lzEndpointAddress =
 		LZ_ENDPOINTS[hre.network.name as keyof typeof LZ_ENDPOINTS]
 
-	const oftV2 = await deploy('OFTV2', {
+	const oftV2 = await deploy('OFTV2Receiver', {
 		from: deployer,
 		args: [TOKEN_NAME, TOKEN_SYMBOL, lzEndpointAddress, owner],
 		log: true,
