@@ -65,11 +65,13 @@ module.exports = async function (args: any, hre: any) {
 		mproAddress,
 	)) as MPRO
 
-	const mproOwner = await mproToken.owner()
+	const mproDistributorRole = await masterDistributor.isDistributor(
+		mproDistributor,
+	)
 
-	if (mproOwner !== masterDistributorAddress) {
+	if (!mproDistributorRole) {
 		console.log(
-			`❌ [${hre.network.name}] MPRO owner is not the master distributor`,
+			`❌ [${hre.network.name}] walles is not a distributor for MPROMasterDistributor contract. Please add the wallet as a distributor first.`,
 		)
 		return
 	}
