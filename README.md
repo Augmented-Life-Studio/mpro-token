@@ -125,7 +125,7 @@ npx hardhat --network ethereum getBeneficiaries --contract AirdropVestingTwo
 npx hardhat --network base getContractInfo
 npx hardhat --network base updateReward
 
-npx hardhat --network ethereum distributeReward --cycle-id "2526e998-f2d3-44d2-a59a-78ee1c0b6f51" --amount "307529801470000000000000"
+npx hardhat --network ethereum distributeReward --cycle-id "386aa081-821c-4e31-b8f8-32def64ad297" --amount "236151675830000000000000"
 
-npx hardhat --network base updateStakers --distribution-tx "0x396fe07748ece5a0afc5b4a4dde7e9fd9797e21919e4e5b4438195f9ae2d02af" --bridge-tx "0x1bd48fadb743a0c76761ec38ba2b0d2df0a6ba82d79eaeaf6d94e7781804f658" --cycle-id "2526e998-f2d3-44d2-a59a-78ee1c0b6f51"
+npx hardhat --network base updateStakers --cycle-id "386aa081-821c-4e31-b8f8-32def64ad297"
 ```
