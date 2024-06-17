@@ -130,51 +130,71 @@ npx hardhat --network base updateStakers --distribution-tx "0x396fe07748ece5a0af
 Multiple versions of OFT
 
 ```shell
+
+# OFT V1.1 ------------------------------------------------------------------------------------------------------------------------------------
+
+# Set peers for V1.1 only for the first time
 npx hardhat --network sepolia setTrustedRemote --target-network base-sepolia --contract OFTV1Legacy
 npx hardhat --network base-sepolia setTrustedRemote --target-network sepolia --contract OFTV1Legacy
 
 npx hardhat --network sepolia setTrustedRemote --target-network base-sepolia --local-contract OFTV1LegacyAdapter --remote-contract OFTV1LegacyReceiver
 npx hardhat --network base-sepolia setTrustedRemote --target-network sepolia --local-contract OFTV1LegacyReceiver --remote-contract OFTV1LegacyAdapter
 
-npx hardhat --network sepolia setTrustedRemote --target-network base-sepolia --contract OFTV1
-npx hardhat --network base-sepolia setTrustedRemote --target-network sepolia --contract OFTV1
-
-npx hardhat --network sepolia setTrustedRemote --target-network base-sepolia --local-contract OFTV1Receiver --remote-contract OFTV1Adapter
-npx hardhat --network base-sepolia setTrustedRemote --target-network sepolia --local-contract OFTV1Adapter --remote-contract OFTV1Receiver
-
+# Set min gas for V1.1 only for the first time
 npx hardhat --network sepolia setMinDstGas --packet-type 0 --target-network base-sepolia --contract OFTV1Legacy --min-gas 100000
 npx hardhat --network base-sepolia setMinDstGas --packet-type 0 --target-network sepolia --contract OFTV1Legacy --min-gas 100000
 
 npx hardhat --network sepolia setMinDstGas --packet-type 0 --target-network base-sepolia --contract OFTV1LegacyAdapter --min-gas 100000
 npx hardhat --network base-sepolia setMinDstGas --packet-type 0 --target-network sepolia --contract OFTV1LegacyReceiver --min-gas 100000
 
+# Bridge OFT V1.1
+npx hardhat --network sepolia oftSendLegacy --target-network base-sepolia --qty 1 --contract OFTV1Legacy
+npx hardhat --network base-sepolia oftSendLegacy --target-network sepolia --qty 1 --contract OFTV1Legacy
+
+# Bridge OFT V1.1 with adapter
+npx hardhat --network sepolia oftSendLegacy --target-network base-sepolia --qty 1 --local-contract OFTV1LegacyAdapter --remote-contract OFTV1LegacyReceiver
+npx hardhat --network base-sepolia oftSendLegacy --target-network sepolia --qty 1 --local-contract OFTV1LegacyReceiver --remote-contract OFTV1LegacyAdapter
+
+# OFT V1.2 ------------------------------------------------------------------------------------------------------------------------------------
+
+# Set peers for V1.2 only for the first time
+npx hardhat --network sepolia setTrustedRemote --target-network base-sepolia --contract OFTV1
+npx hardhat --network base-sepolia setTrustedRemote --target-network sepolia --contract OFTV1
+
+npx hardhat --network sepolia setTrustedRemote --target-network base-sepolia --local-contract OFTV1Receiver --remote-contract OFTV1Adapter
+npx hardhat --network base-sepolia setTrustedRemote --target-network sepolia --local-contract OFTV1Adapter --remote-contract OFTV1Receiver
+
+# Set min gas for V1.2 only for the first time
 npx hardhat --network sepolia setMinDstGas --packet-type 0 --target-network base-sepolia --contract OFTV1 --min-gas 100000
 npx hardhat --network base-sepolia setMinDstGas --packet-type 0 --target-network sepolia --contract OFTV1 --min-gas 100000
 
 npx hardhat --network sepolia setMinDstGas --packet-type 0 --target-network base-sepolia --contract OFTV1Receiver --min-gas 100000
 npx hardhat --network base-sepolia setMinDstGas --packet-type 0 --target-network sepolia --contract OFTV1Adapter --min-gas 100000
 
-npx hardhat --network sepolia oftSendLegacy --target-network base-sepolia --qty 1 --contract OFTV1Legacy
-npx hardhat --network base-sepolia oftSendLegacy --target-network sepolia --qty 1 --contract OFTV1Legacy
-
-npx hardhat --network sepolia oftSendLegacy --target-network base-sepolia --qty 1 --local-contract OFTV1LegacyAdapter --remote-contract OFTV1LegacyReceiver
-
+# Bridge OFT V1.2
 npx hardhat --network sepolia oftSendV1 --target-network base-sepolia --qty 1 --contract OFTV1
 npx hardhat --network base-sepolia oftSendV1 --target-network sepolia --qty 1 --contract OFTV1
 
+# Bridge OFT V1.2 with adapter
 npx hardhat --network base-sepolia oftSendV1 --target-network sepolia --qty 1 --local-contract OFTV1Adapter --remote-contract OFTV1Receiver
+npx hardhat --network sepolia oftSendV1 --target-network base-sepolia --qty 1 --local-contract OFTV1Receiver --remote-contract OFTV1Adapter
 
+# OFT V2 ------------------------------------------------------------------------------------------------------------------------------------
+
+# Set peers for V2 only for the first time
 npx hardhat --network sepolia setPeer --target-network base-sepolia --contract OFTV2
 npx hardhat --network base-sepolia setPeer --target-network sepolia --contract OFTV2
 
+# Set peers for V2 with adapter only for the first time
 npx hardhat --network sepolia setPeer --target-network base-sepolia --local-contract OFTV2Adapter --remote-contract OFTV2Receiver
 npx hardhat --network base-sepolia setPeer --target-network sepolia --local-contract OFTV2Receiver --remote-contract OFTV2Adapter
-
-npx hardhat --network sepolia oftSendTokens --target-network base-sepolia --qty 1 --contract OFTV2 --from-address 0xC856f7BcB20eE58F5788620b1261082829163dc4 --to-address 0xC856f7BcB20eE58F5788620b1261082829163dc4
 
 # V2 bridge OFT
 npx hardhat --network base-sepolia oftSendTokens --target-network sepolia --qty 1 --contract OFTV2 --from-address 0xC856f7BcB20eE58F5788620b1261082829163dc4 --to-address 0xC856f7BcB20eE58F5788620b1261082829163dc4
 
+npx hardhat --network sepolia oftSendTokens --target-network base-sepolia --qty 1 --contract OFTV2 --from-address 0xC856f7BcB20eE58F5788620b1261082829163dc4 --to-address 0xC856f7BcB20eE58F5788620b1261082829163dc4
+
 # V2 bridge with adapter
 npx hardhat --network sepolia oftSendTokens --target-network base-sepolia --qty 1 --local-contract OFTV2Adapter --remote-contract OFTV2Receiver --from-address 0xC856f7BcB20eE58F5788620b1261082829163dc4 --to-address 0xC856f7BcB20eE58F5788620b1261082829163dc4
+npx hardhat --network base-sepolia oftSendTokens --target-network sepolia --qty 1 --local-contract OFTV2Receiver --remote-contract OFTV2Adapter --from-address 0xC856f7BcB20eE58F5788620b1261082829163dc4 --to-address 0xC856f7BcB20eE58F5788620b1261082829163dc4
 ```
