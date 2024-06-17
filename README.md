@@ -172,7 +172,9 @@ npx hardhat --network base-sepolia setPeer --target-network sepolia --local-cont
 
 npx hardhat --network sepolia oftSendTokens --target-network base-sepolia --qty 1 --contract OFTV2 --from-address 0xC856f7BcB20eE58F5788620b1261082829163dc4 --to-address 0xC856f7BcB20eE58F5788620b1261082829163dc4
 
+# V2 bridge OFT
 npx hardhat --network base-sepolia oftSendTokens --target-network sepolia --qty 1 --contract OFTV2 --from-address 0xC856f7BcB20eE58F5788620b1261082829163dc4 --to-address 0xC856f7BcB20eE58F5788620b1261082829163dc4
 
+# V2 bridge with adapter
 npx hardhat --network sepolia oftSendTokens --target-network base-sepolia --qty 1 --local-contract OFTV2Adapter --remote-contract OFTV2Receiver --from-address 0xC856f7BcB20eE58F5788620b1261082829163dc4 --to-address 0xC856f7BcB20eE58F5788620b1261082829163dc4
 ```
