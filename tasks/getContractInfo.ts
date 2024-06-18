@@ -5,7 +5,7 @@ import {ethers} from 'ethers'
 
 module.exports = async function (taskArgs: any, hre: any) {
 	const contract = await hre.ethers.getContractAt(
-		'contracts/MPROStake.sol:MPROAutoStake',
+		'contracts/MPROAutoStake.sol:MPROAutoStake',
 		'0x8beaacF2563a6D225CC8cE11C076a6bCFDCD85AD',
 	)
 

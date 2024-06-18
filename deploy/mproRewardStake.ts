@@ -37,13 +37,13 @@ module.exports = async function ({
 			log: true,
 			waitConfirmations: 5,
 			skipIfAlreadyDeployed: true,
-			contract: 'contracts/MPROStake.sol:MPROStake',
+			contract: 'contracts/MPROAutoStake.sol:MPROAutoStake',
 		})
 
-		console.log('MPROStake deployed to:', mproRewardStake.address)
+		console.log('MPROAutoStake deployed to:', mproRewardStake.address)
 
 		await verifyContractWithRetry(
-			'contracts/MPROStake.sol:MPROStake',
+			'contracts/MPROAutoStake.sol:MPROAutoStake',
 			mproRewardStake.address,
 			mproRewardStake.args,
 		)
@@ -51,7 +51,7 @@ module.exports = async function ({
 	}
 
 	console.log('====================================')
-	console.log('MPROStake addresses:', addresses)
+	console.log('MPROAutoStake addresses:', addresses)
 	console.log('====================================')
 
 	// const mproRewardStake = await deploy('MPRORewardStake', {

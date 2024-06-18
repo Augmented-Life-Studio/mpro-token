@@ -11,7 +11,7 @@ import {
 	MockedMPROStake__factory,
 } from '../typechain-types'
 
-// npx hardhat test test/MPROStake.ts
+// npx hardhat test test/MPROAutoStake.ts
 
 const ONE_DAY = 86400
 
@@ -56,7 +56,7 @@ describe('MPRORewardStake', function () {
 		mproToken = await MPROTestFactory.deploy()
 
 		const MPRORewardStakeFactory = (await ethers.getContractFactory(
-			'contracts/MPROStake.sol:MPROAutoStake',
+			'contracts/MPROAutoStake.sol:MPROAutoStake',
 		)) as MPROAutoStake__factory
 
 		mproRewardStake = await MPRORewardStakeFactory.connect(deployer).deploy(
@@ -310,7 +310,7 @@ describe('MPRORewardStake', function () {
 			const currentBlock = await ethers.provider.getBlock('latest')
 			const currentTimestamp = currentBlock?.timestamp || 0
 			const MPRORewardStakeFactory = (await ethers.getContractFactory(
-				'contracts/MPROStake.sol:MPROAutoStake',
+				'contracts/MPROAutoStake.sol:MPROAutoStake',
 			)) as MPROAutoStake__factory
 			const newMproRewardStake = await MPRORewardStakeFactory.connect(
 				deployer,
@@ -711,7 +711,7 @@ describe('MPRORewardStake', function () {
 	describe('setStakeConfig() function', () => {
 		it('Should set stake config properly', async () => {
 			const MPRORewardStakeFactory = (await ethers.getContractFactory(
-				'contracts/MPROStake.sol:MPROAutoStake',
+				'contracts/MPROAutoStake.sol:MPROAutoStake',
 			)) as MPROAutoStake__factory
 			const newMproRewardStake = await MPRORewardStakeFactory.connect(
 				deployer,
@@ -942,7 +942,7 @@ describe('MPRORewardStake', function () {
 			const currentBlock = await ethers.provider.getBlock('latest')
 			const currentTimestamp = currentBlock?.timestamp || 0
 			const MPRORewardStakeFactory = (await ethers.getContractFactory(
-				'contracts/MPROStake.sol:MPROAutoStake',
+				'contracts/MPROAutoStake.sol:MPROAutoStake',
 			)) as MPROAutoStake__factory
 
 			const newMproRewardStake = await MPRORewardStakeFactory.connect(
@@ -1258,7 +1258,7 @@ describe('MPRORewardStake', function () {
 	describe('Testing full scenario on multiple stakers', () => {
 		it('Should pass the full flow correctly on multiple stakers', async () => {
 			const MPRORewardStakeFactory = (await ethers.getContractFactory(
-				'contracts/MPROStake.sol:MPROAutoStake',
+				'contracts/MPROAutoStake.sol:MPROAutoStake',
 			)) as MPROAutoStake__factory
 
 			const newMproRewardStake = await MPRORewardStakeFactory.connect(
@@ -1364,7 +1364,7 @@ describe('MPRORewardStake', function () {
 	describe('Failing tests from QA', () => {
 		it('Should pass the full flow correctly on multiple stakers', async () => {
 			const MPRORewardStakeFactory = (await ethers.getContractFactory(
-				'contracts/MPROStake.sol:MPROAutoStake',
+				'contracts/MPROAutoStake.sol:MPROAutoStake',
 			)) as MPROAutoStake__factory
 
 			const newMproRewardStake = await MPRORewardStakeFactory.connect(
@@ -1441,7 +1441,7 @@ describe('MPRORewardStake', function () {
 	describe('Testing claiming before stake ends', () => {
 		it('Allow to claim reward before stake ends', async function () {
 			const MPRORewardStakeFactory = (await ethers.getContractFactory(
-				'contracts/MPROStake.sol:MPROAutoStake',
+				'contracts/MPROAutoStake.sol:MPROAutoStake',
 			)) as MPROAutoStake__factory
 
 			const newMproRewardStake = await MPRORewardStakeFactory.connect(
@@ -1518,10 +1518,10 @@ describe('MPRORewardStake', function () {
 		})
 	})
 
-	describe.only('Prod flow', () => {
+	describe('Prod flow', () => {
 		it('Allow to claim reward before stake ends', async function () {
 			const MPRORewardStakeFactory = (await ethers.getContractFactory(
-				'contracts/MPROStake.sol:MPROAutoStake',
+				'contracts/MPROAutoStake.sol:MPROAutoStake',
 			)) as MPROAutoStake__factory
 
 			const newMproRewardStake = await MPRORewardStakeFactory.connect(

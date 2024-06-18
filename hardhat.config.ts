@@ -41,7 +41,7 @@ const config: HardhatUserConfig = {
 	namedAccounts: {
 		// Account used for deployment
 		deployer: {
-			default: '0x4864b21d5C7baCC59aA713cE9a40E4A170502542', // wallet address 0, of the mnemonic in .env
+			default: '0xC856f7BcB20eE58F5788620b1261082829163dc4', // wallet address 0, of the mnemonic in .env
 		},
 		// Owner of the contract
 		owner: {

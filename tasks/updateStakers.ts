@@ -39,7 +39,7 @@ module.exports = async function (args: any, hre: any) {
 	)) as MPRO
 
 	const stakeContarct = await hre.ethers.getContractAt(
-		'contracts/MPROStake.sol:MPROAutoStake',
+		'contracts/MPROAutoStake.sol:MPROAutoStake',
 		stakeAddress,
 	)
 

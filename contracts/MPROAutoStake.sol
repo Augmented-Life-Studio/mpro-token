@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
+// TODO remove console
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract MPROStake is Ownable, Pausable {
+contract MPROAutoStake is Ownable, Pausable {
     using SafeMath for uint256;
 
     // Unlock percent divider
@@ -18,6 +20,10 @@ contract MPROStake is Ownable, Pausable {
     uint256 public stakeStartTimestamp;
     // End of staking period
     uint256 public stakeEndTimestamp;
+    // Start of updating period
+    uint256 public updateStakersStartTimestamp;
+    // End of updating period
+    uint256 public updateStakersEndTimestamp;
     // Reward to be paid out per second
     uint256 public rewardPerSecond;
     // Quantity of reward token to be paid out
@@ -25,6 +31,11 @@ contract MPROStake is Ownable, Pausable {
     // Total staked
     uint256 public totalStakedSupply;
 
+    // DECLARATION CONFIG
+    // Start timestamp of the declaration period (enable to add new wallets to the staking pool)
+    uint256 public declarationStartTimestamp;
+    // End timestamp of the declaration period (disable to add new wallets to the staking pool)
+    uint256 public declarationEndTimestamp;
     // Last reward timestamp
     uint256 public lastRewardTimestamp;
     // Accumulated reward per share
@@ -44,14 +55,6 @@ contract MPROStake is Ownable, Pausable {
         uint256 claimedBalance;
         uint256 reward;
         uint256 rewardDebt;
-    }
-
-    struct StakeConfig {
-        uint256 stakeStartTimestamp;
-        uint256 stakeEndTimestamp;
-        uint256 rewardPerSecond;
-        uint256 rewardTokenQuantity;
-        uint256 totalStakedSupply;
     }
     // Stakers
     mapping(address => Staker) public staker;
@@ -77,7 +80,7 @@ contract MPROStake is Ownable, Pausable {
 
     modifier onlyWhitelistedStakes() {
         require(
-            isStakeWhitelisted[_msgSender()],
+            isStakeWhitelisted[msg.sender],
             "MPRORewardStake: Stake contract is not whitelisted"
         );
         _;
@@ -85,12 +88,13 @@ contract MPROStake is Ownable, Pausable {
 
     modifier onlyWhitelistedUpdaters() {
         require(
-            isUpdaterWhitelisted[_msgSender()] || _msgSender() == owner(),
+            isUpdaterWhitelisted[msg.sender] || msg.sender == owner(),
             "MPRORewardStake: Address is not whitelisted updater"
         );
         _;
     }
 
+    event UpdateStakers(uint256 _updatedStakeAmount);
     event StakeReward(address _staker, uint256 _rewardAmount);
     event Stake(address _staker, uint256 _stakeAmount);
     event MoveToStake(address _staker, address _stake, uint256 _amount);
@@ -110,32 +114,85 @@ contract MPROStake is Ownable, Pausable {
         _transferOwnership(_newOwner);
     }
 
-    function stake(uint256 _amount) public onlyWhitelistedUpdaters {
+    /**
+     * @dev Updates stakers' information and rewards within the contract.
+     *
+     * This function is used by the contract owner to update stakers' information and distribute rewards accordingly. It verifies the validity of inputs, ensures that the stake period is valid, and calculates the amount to update including pending rewards. It iterates through the provided stakers and their corresponding amounts, updating their staked amounts, total amounts to transfer, rewards to be paid out, and balances to claim. If a new staker is encountered within the declaration period, their length is increased. Rewards are compounded based on the time since the last update. After updating the stakers' information, the required tokens are transferred to the contract address, and the total staked supply and rewards are adjusted accordingly.
+     *
+     * @param _stakers An array of stakers' addresses.
+     * @param _amounts An array of corresponding staked amounts for each staker.
+     */
+    function updateStakers(
+        address[] memory _stakers,
+        uint256[] memory _amounts
+    ) public onlyWhitelistedUpdaters {
+        // Check if input is valid
+        require(
+            _stakers.length == _amounts.length,
+            "Invalid input - length mismatch"
+        );
+        // Check if stake config is set
+        require(
+            updateStakersStartTimestamp > 0 && updateStakersEndTimestamp > 0,
+            "Require to set stake config"
+        );
+        // Check is the staking period is valid
+        require(
+            block.timestamp >= updateStakersStartTimestamp,
+            "Can not update out of the updating period"
+        );
         // Update pool before updating stakers
         updatePool();
-        Staker storage _staker = staker[_msgSender()];
+        // Counting amount to update including pending rewards
+        uint256 stakedAmountToUpdate = 0;
+        // Counting amount to transfer based on stakers amount
+        uint256 totalAmountToUpdate = 0;
+        // Total rewards to be paid out
+        uint256 rewardedAmountToUpdate = 0;
+        for (uint256 i = 0; i < _stakers.length; i++) {
+            Staker storage _staker = staker[_stakers[i]];
+            // Skip new stakers if declaration period is over or not started
+            if (
+                _staker.staked == 0 &&
+                (block.timestamp > declarationEndTimestamp ||
+                    block.timestamp < declarationStartTimestamp)
+            ) {
+                continue;
+            } else {
+                // stake reward
+                uint256 reward = stakeReward(_stakers[i]);
+                // Update staked amount
+                uint256 stakeAmount = stake(_stakers[i], _amounts[i]);
 
-        // stake reward
-        uint256 reward = stakeReward(_msgSender());
-        // Update staked amount
-        uint256 stakeAmount = stakeLocal(_msgSender(), _amount);
+                // Amount taht will be subtracted from rewards
+                rewardedAmountToUpdate += reward;
+                // Update total amount to transfer for every staker
+                totalAmountToUpdate += stakeAmount;
+                // Amount that will be available to claim including compounded rewards
+                stakedAmountToUpdate += stakeAmount + reward;
 
-        _staker.rewardDebt = getAmountByWallet(_msgSender())
-            .mul(accRewardTokenPerShare)
-            .div(1e18);
+                _staker.rewardDebt = getAmountByWallet(_stakers[i])
+                    .mul(accRewardTokenPerShare)
+                    .div(1e18);
 
-        walletStakeUpdates[_msgSender()].push(
-            StakeUpdate({
-                _blockTimestamp: block.timestamp,
-                _updatedAmount: _amount + reward
-            })
-        );
-
+                walletStakeUpdates[_stakers[i]].push(
+                    StakeUpdate({
+                        _blockTimestamp: block.timestamp,
+                        _updatedAmount: _amounts[i] + reward
+                    })
+                );
+            }
+        }
         // Send required tokens to the contract address
-        rewardToken.transferFrom(_msgSender(), address(this), stakeAmount);
+        rewardToken.transferFrom(
+            msg.sender,
+            address(this),
+            totalAmountToUpdate
+        );
         // Update total staked supply increased by pending rewards
-        rewardTokenQuantity -= reward;
-        totalStakedSupply += stakeAmount + reward;
+        rewardTokenQuantity -= rewardedAmountToUpdate;
+        totalStakedSupply += stakedAmountToUpdate;
+        emit UpdateStakers(stakedAmountToUpdate);
     }
 
     function stakeReward(address _wallet) private returns (uint256) {
@@ -166,10 +223,7 @@ contract MPROStake is Ownable, Pausable {
      * @param _amount The amount of tokens to stake.
      * @return uint256 The staked amount.
      */
-    function stakeLocal(
-        address _wallet,
-        uint256 _amount
-    ) private returns (uint256) {
+    function stake(address _wallet, uint256 _amount) private returns (uint256) {
         Staker storage _staker = staker[_wallet];
         _staker.staked += _amount;
         _staker.balanceWithRewards += _amount;
@@ -321,7 +375,7 @@ contract MPROStake is Ownable, Pausable {
         );
         require(block.timestamp < stakeEndTimestamp, "Stake period has ended");
         updatePool();
-        rewardToken.transferFrom(_msgSender(), address(this), _amount);
+        rewardToken.transferFrom(msg.sender, address(this), _amount);
         rewardTokenQuantity += _amount;
         accRewardTokenQuantity += _amount;
         uint256 remainingStakeTime = stakeEndTimestamp - block.timestamp;
@@ -596,7 +650,7 @@ contract MPROStake is Ownable, Pausable {
      * @param _amount The amount to remove from the contract.
      */
     function removeDust(uint256 _amount) public onlyOwner {
-        rewardToken.transfer(_msgSender(), _amount);
+        rewardToken.transfer(msg.sender, _amount);
     }
 
     /**
@@ -606,7 +660,7 @@ contract MPROStake is Ownable, Pausable {
         updatePool();
         rewardToken.transferFrom(
             address(this),
-            _msgSender(),
+            msg.sender,
             rewardTokenQuantity
         );
         rewardTokenQuantity -= rewardTokenQuantity;
@@ -643,18 +697,32 @@ contract MPROStake is Ownable, Pausable {
      *
      * @param _stakeStartTimestamp The start timestamp for the stake period.
      * @param _stakeEndTimestamp The end timestamp for the stake period.
+     * @param _updateStakersStartTimestamp The start timestamp for the updating period.
+     * @param _updateStakersEndTimestamp The end timestamp for the updating period.
+     * @param _declarationStartTimestamp The start timestamp for the declaration period.
+     * @param _declarationEndTimestamp The end timestamp for the declaration period.
      */
     function setStakeConfig(
         uint256 _stakeStartTimestamp,
-        uint256 _stakeEndTimestamp
+        uint256 _stakeEndTimestamp,
+        uint256 _updateStakersStartTimestamp,
+        uint256 _updateStakersEndTimestamp,
+        uint256 _declarationStartTimestamp,
+        uint256 _declarationEndTimestamp
     ) public onlyOwner {
         require(
-            _stakeStartTimestamp < _stakeEndTimestamp,
+            _stakeStartTimestamp < _stakeEndTimestamp &&
+                _declarationStartTimestamp < _declarationEndTimestamp &&
+                _updateStakersStartTimestamp < _updateStakersEndTimestamp,
             "MPRORewardStake: Invalid stake configuration"
         );
         require(
             _stakeStartTimestamp > block.timestamp &&
-                _stakeEndTimestamp > block.timestamp,
+                _stakeEndTimestamp > block.timestamp &&
+                _updateStakersStartTimestamp > block.timestamp &&
+                _updateStakersEndTimestamp > block.timestamp &&
+                _declarationStartTimestamp > block.timestamp &&
+                _declarationEndTimestamp > block.timestamp,
             "MPRORewardStake: Invalid stake configuration - timestamps should be in the future"
         );
 
@@ -663,6 +731,10 @@ contract MPROStake is Ownable, Pausable {
             stakeStartTimestamp = _stakeStartTimestamp;
             stakeEndTimestamp = _stakeEndTimestamp;
         }
+        updateStakersStartTimestamp = _updateStakersStartTimestamp;
+        updateStakersEndTimestamp = _updateStakersEndTimestamp;
+        declarationStartTimestamp = _declarationStartTimestamp;
+        declarationEndTimestamp = _declarationEndTimestamp;
     }
 
     /**
@@ -715,20 +787,5 @@ contract MPROStake is Ownable, Pausable {
 
     function unpause() public onlyWhitelistedUpdaters {
         _unpause();
-    }
-
-    function getStakeConfig()
-        public
-        view
-        returns (StakeConfig memory stakeConfig)
-    {
-        return
-            StakeConfig({
-                stakeStartTimestamp: stakeStartTimestamp,
-                stakeEndTimestamp: stakeEndTimestamp,
-                rewardPerSecond: rewardPerSecond,
-                rewardTokenQuantity: rewardTokenQuantity,
-                totalStakedSupply: totalStakedSupply
-            });
     }
 }

@@ -4,26 +4,24 @@ import {getDeploymentAddresses} from '../utils/readStatic'
 import {ethers} from 'hardhat'
 
 // npx hardhat deploy --tags MPROStake --network base
+// npx hardhat deploy --tags MPROStake --network base-sepolia
 
-const MPRO_TOKEN = '0xd88611a629265c9af294ffdd2e7fa4546612273e'
+const MPRO_TOKEN = '0xbf31DE649bA7AC79e92FEe4171B16c84B7c352A0'
 
 module.exports = async function ({
 	deployments,
 	getNamedAccounts,
-	network,
 }: {
 	deployments: DeploymentsExtension
 	getNamedAccounts: any
-	network: any
 }) {
 	let tx
-	const {deployer, owner} = await getNamedAccounts()
+	const {deployer} = await getNamedAccounts()
+	const updaterSigner = await ethers.getSigner(deployer)
 
 	const {deploy} = deployments
 
-	const netName = network.name
-
-	const mproRewardStake = await deploy(`MPROAutoStake`, {
+	const mproStakeDeployment = await deploy(`MPROStake`, {
 		from: deployer,
 		args: [
 			MPRO_TOKEN, //MPRO token address,
@@ -32,36 +30,38 @@ module.exports = async function ({
 		log: true,
 		waitConfirmations: 5,
 		skipIfAlreadyDeployed: true,
-		contract: 'contracts/MPROStake.sol:MPROAutoStake',
+		contract: 'contracts/MPROStake.sol:MPROStake',
 	})
 
-	console.log('MPROStake deployed to:', mproRewardStake.address)
+	await verifyContractWithRetry(
+		'contracts/MPROStake.sol:MPROStake',
+		mproStakeDeployment.address,
+		mproStakeDeployment.args,
+	)
+
+	console.log('MPROStake deployed to:', mproStakeDeployment.address)
 
 	const mproStake = await ethers.getContractAt(
-		`MPROAutoStake`,
-		mproRewardStake.address,
+		`MPROStake`,
+		mproStakeDeployment.address,
 	)
 
 	const currentTimestamp = Math.floor(Date.now() / 1000) + 10 // 10 seconds in the future
 
-	tx = await mproStake.setStakeConfig(
+	tx = await mproStake.connect(updaterSigner).setStakeConfig(
 		currentTimestamp, // _stakeStartTimestamp
 		currentTimestamp + 62 * 24 * 60 * 60, // _stakeEndTimestamp
-		currentTimestamp, // _updateStakersStartTimestamp
-		currentTimestamp + 46 * 24 * 60 * 60 + 8 * 60 * 60, // _updateStakersEndTimestamp
-		currentTimestamp, // _declarationStartTimestamp
-		currentTimestamp + 45 * 24 * 60 * 60 - 2 * 60 * 60, // _declarationEndTimestamp
 	)
 	await tx.wait()
 	console.log(`Stake config set in tx: ${tx.hash}`)
 
-	tx = await mproStake.setClaimRewardConfig(
-		currentTimestamp + 62 * 24 * 60 * 60, // _claimRewardStartTimestamp
-		24 * 60 * 60, // _claimPeriodDuration
-		40, // _rewardUnlockPercentPerPeriod
+	tx = await mproStake.connect(updaterSigner).setClaimRewardConfig(
+		currentTimestamp, // _stakeStartTimestamp
+		currentTimestamp + 62 * 24 * 60 * 60, // _stakeEndTimestamp
+		100, // _rewardUnlockPercentPerPeriod
 	)
 	await tx.wait()
 	console.log(`Claim reward config set in tx: ${tx.hash}`)
 }
 
-module.exports.tags = ['MPROAutoStake']
+module.exports.tags = ['MPROStake']
