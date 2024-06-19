@@ -65,17 +65,6 @@ module.exports = async function (args: any, hre: any) {
 		mproAddress,
 	)) as MPRO
 
-	const mproDistributorRole = await masterDistributor.isDistributor(
-		mproDistributor,
-	)
-
-	if (!mproDistributorRole) {
-		console.log(
-			`❌ [${hre.network.name}] walles is not a distributor for MPROMasterDistributor contract. Please add the wallet as a distributor first.`,
-		)
-		return
-	}
-
 	const bigIntAmount = BigInt(args.amount)
 
 	// get remote chain id
@@ -110,7 +99,7 @@ module.exports = async function (args: any, hre: any) {
 	await txBridge.wait()
 
 	console.log(
-		`✅ [${hre.network.name}] Successfully distributed ${args.amount} MPRO tokens and bridged to ${remoteChainId} chain. Bridge tx hash: ${txBridge.hash}`,
+		`✅ [${hre.network.name}] Successfully bridged to ${remoteChainId} chain. Bridge tx hash: ${txBridge.hash}`,
 	)
 
 	const dbDataToPass: DBStakersData = {
