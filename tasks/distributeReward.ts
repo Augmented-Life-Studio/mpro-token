@@ -94,11 +94,11 @@ module.exports = async function (args: any, hre: any) {
 		`fees[0] (wei): ${nativeFee} / (eth): ${ethers.formatEther(nativeFee)}`,
 	)
 
-	const txDistribution = await masterDistributor
-		.connect(ownerSigner)
-		.distribute(mproDistributor, bigIntAmount)
+	// const txDistribution = await masterDistributor
+	// 	.connect(ownerSigner)
+	// 	.distribute(mproDistributor, bigIntAmount)
 
-	await txDistribution.wait()
+	// await txDistribution.wait()
 
 	// Bridge tokens
 	const txBridge = await mproToken
@@ -110,12 +110,11 @@ module.exports = async function (args: any, hre: any) {
 	await txBridge.wait()
 
 	console.log(
-		`✅ [${hre.network.name}] Successfully distributed ${args.amount} MPRO tokens and bridged to ${remoteChainId} chain. Distribution tx hash: ${txDistribution.hash} Bridge tx hash: ${txBridge.hash}`,
+		`✅ [${hre.network.name}] Successfully distributed ${args.amount} MPRO tokens and bridged to ${remoteChainId} chain. Bridge tx hash: ${txBridge.hash}`,
 	)
 
 	const dbDataToPass: DBStakersData = {
 		...updateStakersCycleData,
-		rewardDistributionTxHash: txDistribution.hash,
 		bridgeTxHash: txBridge.hash,
 	}
 
