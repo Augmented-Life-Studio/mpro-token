@@ -247,7 +247,7 @@ describe('MPRORewardStake', function () {
 		})
 	})
 
-	describe.only('stake() function', function () {
+	describe('stake() function', function () {
 		it('Production flow 1', async function () {
 			await mproToken
 				.connect(owner)
@@ -308,6 +308,29 @@ describe('MPRORewardStake', function () {
 
 			const staker = await mproRewardStake.staker(stakers[0].address)
 			console.log(staker)
+		})
+	})
+
+	describe.only('stake() another function', function () {
+		it('Unworking production flow', async function () {
+			await mproRewardStake
+				.connect(owner)
+				.setClaimRewardConfig(stakeStartTimestamp, ONE_DAY, 10000)
+			await mproToken
+				.connect(owner)
+				.distibute(owner.address, ethers.parseEther('1000'))
+			await mproRewardStake
+				.connect(owner)
+				.updateReward(ethers.parseEther('1000'))
+
+			await mproRewardStake.connect(stakers[0]).stake(ethers.parseEther('100'))
+			await network.provider.send('evm_increaseTime', [100])
+			await mine()
+
+			await mproRewardStake.connect(stakers[0]).claimReward()
+			await mproRewardStake.connect(stakers[0]).unstake()
+			const totalStaked = await mproRewardStake.totalStakedSupply()
+			expect(totalStaked).to.equal(0)
 		})
 	})
 })

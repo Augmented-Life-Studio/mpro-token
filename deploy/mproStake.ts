@@ -62,8 +62,8 @@ module.exports = async function ({
 
 	tx = await mproStake.connect(updaterSigner).setClaimRewardConfig(
 		currentTimestamp, // _stakeStartTimestamp
-		currentTimestamp + 62 * 24 * 60 * 60, // _stakeEndTimestamp
-		100, // _rewardUnlockPercentPerPeriod
+		0, // _stakeEndTimestamp
+		10000, // _rewardUnlockPercentPerPeriod
 	)
 	await tx.wait()
 	console.log(`Claim reward config set in tx: ${tx.hash}`)

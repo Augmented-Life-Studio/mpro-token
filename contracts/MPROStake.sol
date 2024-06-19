@@ -723,13 +723,20 @@ contract MPROStake is Ownable, Pausable {
         uint256 _claimPeriodDuration,
         uint256 _rewardUnlockPercentPerPeriod
     ) public onlyOwner {
-        require(
-            _claimRewardStartTimestamp > 0 &&
-                _claimPeriodDuration > 0 &&
+        if (_claimPeriodDuration > 0) {
+            require(
                 _rewardUnlockPercentPerPeriod > 0 &&
-                _rewardUnlockPercentPerPeriod <= 10000,
-            "MPROStake: Invalid claim reward configuration"
-        );
+                    _rewardUnlockPercentPerPeriod <= 10000 &&
+                    _claimRewardStartTimestamp > 0,
+                "MPROStake: Invalid claim reward configuration"
+            );
+        } else {
+            require(
+                _claimRewardStartTimestamp > 0,
+                "MPROStake: Invalid claim reward configuration"
+            );
+        }
+
         claimRewardStartTimestamp = _claimRewardStartTimestamp;
         claimPeriodDuration = _claimPeriodDuration;
         rewardUnlockPercentPerPeriod = _rewardUnlockPercentPerPeriod;
