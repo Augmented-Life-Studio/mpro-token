@@ -46,6 +46,11 @@ module.exports = async function ({
 		mproStakeDeployment.address,
 	)
 
+	const mproToken = await ethers.getContractAt(
+		`contracts/MPROLight.sol:MPRO`,
+		MPRO_TOKEN,
+	)
+
 	const currentTimestamp = Math.floor(Date.now() / 1000) + 10 // 10 seconds in the future
 
 	tx = await mproStake.connect(updaterSigner).setStakeConfig(
@@ -62,6 +67,19 @@ module.exports = async function ({
 	)
 	await tx.wait()
 	console.log(`Claim reward config set in tx: ${tx.hash}`)
+
+	tx = await mproToken
+		.connect(updaterSigner)
+		// @ts-ignore
+		.increaseAllowance(mproStake.target, ethers.MaxUint256)
+
+	await tx.wait()
+
+	tx = await mproStake.connect(updaterSigner).updateReward(
+		ethers.parseUnits('1000'), // _rewardAmount
+	)
+	await tx.wait()
+	console.log(`UpdatedReward in tx: ${tx.hash}`)
 }
 
 module.exports.tags = ['MPROStake']

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
+// TODO remove console
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -37,7 +39,7 @@ contract MPROStake is Ownable, Pausable {
     uint256 private distributedReward;
 
     struct Staker {
-        // pure staked tokens
+        // pure staked tokens only
         uint256 staked;
         // staked tokens with compounds
         uint256 balanceWithRewards;
@@ -78,7 +80,7 @@ contract MPROStake is Ownable, Pausable {
     modifier onlyWhitelistedStakes() {
         require(
             isStakeWhitelisted[_msgSender()],
-            "MPRORewardStake: Stake contract is not whitelisted"
+            "MPROStake: Stake contract is not whitelisted"
         );
         _;
     }
@@ -86,7 +88,7 @@ contract MPROStake is Ownable, Pausable {
     modifier onlyWhitelistedUpdaters() {
         require(
             isUpdaterWhitelisted[_msgSender()] || _msgSender() == owner(),
-            "MPRORewardStake: Address is not whitelisted updater"
+            "MPROStake: Address is not whitelisted updater"
         );
         _;
     }
@@ -94,7 +96,8 @@ contract MPROStake is Ownable, Pausable {
     event StakeReward(address _staker, uint256 _rewardAmount);
     event Stake(address _staker, uint256 _stakeAmount);
     event MoveToStake(address _staker, address _stake, uint256 _amount);
-    event Claim(address _staker, uint256 _amount);
+    event Unstake(address _staker, uint256 _amount);
+    event ClaimReward(address _staker, uint256 _amount);
     event UpdateReward(uint256 _amount, uint256 _rewardPerSecond);
 
     /**
@@ -110,7 +113,7 @@ contract MPROStake is Ownable, Pausable {
         _transferOwnership(_newOwner);
     }
 
-    function stake(uint256 _amount) public onlyWhitelistedUpdaters {
+    function stake(uint256 _amount) public {
         // Update pool before updating stakers
         updatePool();
         Staker storage _staker = staker[_msgSender()];
@@ -127,15 +130,16 @@ contract MPROStake is Ownable, Pausable {
         walletStakeUpdates[_msgSender()].push(
             StakeUpdate({
                 _blockTimestamp: block.timestamp,
-                _updatedAmount: _amount + reward
+                _updatedAmount: stakeAmount + reward
             })
         );
-
         // Send required tokens to the contract address
         rewardToken.transferFrom(_msgSender(), address(this), stakeAmount);
         // Update total staked supply increased by pending rewards
         rewardTokenQuantity -= reward;
         totalStakedSupply += stakeAmount + reward;
+
+        emit Stake(_msgSender(), stakeAmount + reward);
     }
 
     function stakeReward(address _wallet) private returns (uint256) {
@@ -178,7 +182,6 @@ contract MPROStake is Ownable, Pausable {
             .mul(accRewardTokenPerShare)
             .div(1e18);
 
-        emit Stake(_wallet, _amount);
         return _amount;
     }
 
@@ -391,6 +394,7 @@ contract MPROStake is Ownable, Pausable {
         _staker.claimedBalance += tokensEnableToTransfer;
         rewardToken.transfer(_msgSender(), tokensEnableToTransfer);
 
+        _staker.staked = 0;
         stakedSupply -= tokensEnableToTransfer;
         totalStakedSupply = stakedSupply;
 
@@ -420,16 +424,37 @@ contract MPROStake is Ownable, Pausable {
         return _staker.balanceWithRewards.sub(_staker.claimedBalance);
     }
 
+    function claimReward() external virtual whenNotPaused {
+        require(
+            claimRewardStartTimestamp > 0 &&
+                block.timestamp >= claimRewardStartTimestamp,
+            "MPROStake: Claim period has not started"
+        );
+
+        uint256 _pendingReward = pendingReward(_msgSender());
+        require(_pendingReward > 0, "MPROStake: No tokens to claim");
+        updatePool();
+        Staker storage _staker = staker[_msgSender()];
+        rewardTokenQuantity -= _pendingReward;
+        rewardToken.transfer(_msgSender(), _pendingReward);
+
+        _staker.rewardDebt = getAmountByWallet(_msgSender())
+            .mul(accRewardTokenPerShare)
+            .div(1e18);
+
+        emit ClaimReward(_msgSender(), _pendingReward);
+    }
+
     /**
      * @dev Claims tokens for the sender.
      *
      * This function allows the sender to claim tokens. It verifies that the contract is not paused and there are tokens available for claim. It updates the staker's balance to claim if there are pending rewards. It then ensures that the remaining balance to claim is sufficient for the tokens to be claimed. If the conditions are met, the tokens are transferred to the sender.
      */
-    function claim() external virtual whenNotPaused {
+    function unstake() external virtual whenNotPaused {
         require(
             claimRewardStartTimestamp > 0 &&
                 block.timestamp >= claimRewardStartTimestamp,
-            "MPRORewardStake: Claim period has not started"
+            "MPROStake: Claim period has not started"
         );
         uint256 stakedSupply = totalStakedSupply;
         updatePool();
@@ -442,19 +467,17 @@ contract MPROStake is Ownable, Pausable {
         }
         uint256 tokensEnableForRelease = enableForRelease();
 
-        require(
-            tokensEnableForRelease > 0,
-            "MPRORewardStake: No tokens to claim"
-        );
+        require(tokensEnableForRelease > 0, "MPROStake: No tokens to claim");
 
         require(
             _staker.balanceWithRewards - _staker.claimedBalance >=
                 tokensEnableForRelease,
-            "MPRORewardStake: Not enough tokens to claim"
+            "MPROStake: Not enough tokens to claim"
         );
         _staker.claimedBalance += tokensEnableForRelease;
         rewardToken.transfer(_msgSender(), tokensEnableForRelease);
 
+        _staker.staked = 0;
         stakedSupply -= tokensEnableForRelease;
         totalStakedSupply = stakedSupply;
 
@@ -462,7 +485,7 @@ contract MPROStake is Ownable, Pausable {
             .mul(accRewardTokenPerShare)
             .div(1e18);
 
-        emit Claim(_msgSender(), tokensEnableForRelease);
+        emit Unstake(_msgSender(), tokensEnableForRelease);
     }
 
     /**
@@ -497,11 +520,32 @@ contract MPROStake is Ownable, Pausable {
             }
             // When claim config is not set we allow to claim all tokens
             else {
-                return _staker.balanceWithRewards;
+                return getAmountByWallet(_msgSender());
             }
         } else {
             return 0;
         }
+    }
+
+    function compoundReward() external virtual whenNotPaused {
+        uint256 _pendingReward = pendingReward(_msgSender());
+        require(_pendingReward > 0, "MPROStake: No rewards to compound");
+        updatePool();
+        Staker storage _staker = staker[_msgSender()];
+        uint256 reward = stakeReward(_msgSender());
+        walletStakeUpdates[_msgSender()].push(
+            StakeUpdate({
+                _blockTimestamp: block.timestamp,
+                _updatedAmount: reward
+            })
+        );
+
+        rewardTokenQuantity -= reward;
+        totalStakedSupply += reward;
+
+        _staker.rewardDebt = getAmountByWallet(_msgSender())
+            .mul(accRewardTokenPerShare)
+            .div(1e18);
     }
 
     /**
@@ -650,12 +694,12 @@ contract MPROStake is Ownable, Pausable {
     ) public onlyOwner {
         require(
             _stakeStartTimestamp < _stakeEndTimestamp,
-            "MPRORewardStake: Invalid stake configuration"
+            "MPROStake: Invalid stake configuration"
         );
         require(
             _stakeStartTimestamp > block.timestamp &&
                 _stakeEndTimestamp > block.timestamp,
-            "MPRORewardStake: Invalid stake configuration - timestamps should be in the future"
+            "MPROStake: Invalid stake configuration - timestamps should be in the future"
         );
 
         // Check if the stake start timestamp is greater than the current timestamp
@@ -684,7 +728,7 @@ contract MPROStake is Ownable, Pausable {
                 _claimPeriodDuration > 0 &&
                 _rewardUnlockPercentPerPeriod > 0 &&
                 _rewardUnlockPercentPerPeriod <= 10000,
-            "MPRORewardStake: Invalid claim reward configuration"
+            "MPROStake: Invalid claim reward configuration"
         );
         claimRewardStartTimestamp = _claimRewardStartTimestamp;
         claimPeriodDuration = _claimPeriodDuration;
