@@ -62,3 +62,5 @@ task(
 )
 	.addParam('cycleId', 'cycleID to update')
 	.addParam('amount', 'Reward amount')
+
+task('setDistributor', 'Distriute reward to base', require('./setDistributor'))
