@@ -64,3 +64,9 @@ task(
 	.addParam('amount', 'Reward amount')
 
 task('setDistributor', 'Distriute reward to base', require('./setDistributor'))
+
+task(
+	'setUpdater',
+	'Distriute reward to base',
+	require('./setWhitelistedUpdater'),
+)
