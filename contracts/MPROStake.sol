@@ -99,6 +99,7 @@ contract MPROStake is Ownable, Pausable {
     event Unstake(address _staker, uint256 _amount);
     event ClaimReward(address _staker, uint256 _amount);
     event UpdateReward(uint256 _amount, uint256 _rewardPerSecond);
+    event CompoundReward(address _staker, uint256 _amount);
 
     /**
      * @dev Initializes the MPROAutoStake contract.
@@ -546,6 +547,8 @@ contract MPROStake is Ownable, Pausable {
         _staker.rewardDebt = getAmountByWallet(_msgSender())
             .mul(accRewardTokenPerShare)
             .div(1e18);
+
+        emit CompoundReward(_msgSender(), reward);
     }
 
     /**
