@@ -127,7 +127,7 @@ npx hardhat --network base updateReward
 
 npx hardhat --network ethereum distributeReward --cycle-id "e43d2ccd-e5f3-4c94-bb16-0c8e8dae84f2" --amount "266630190360000000000000"
 
-npx hardhat --network base updateStakers --cycle-id "e43d2ccd-e5f3-4c94-bb16-0c8e8dae84f2"
+npx hardhat --network base updateStakers --cycle-id "40290c88-cc2c-496b-a992-4a18e3ef934c"
 
 npx hardhat --network ethereum setDistributor
 npx hardhat --network base setUpdater
