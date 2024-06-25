@@ -5606,877 +5606,1002 @@
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead2c"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xcb1a39b5a08d55ace7f82ed8aebc4f9a52440b11",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead2d"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x38397519d12a45dff0321f7a2fda88e0d09c057f",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead2e"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x20234773c85abd1096eec44a3695ffc8343f9221",
       "reward": 109.7028,
       "_id": {
         "$oid": "667a7d1763b83098573ead2f"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xcd6a8de26b432345e348b33fd8d3a01d1f69d9f0",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead30"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x4104b6c151e2dc5049b0fae92f15dc63eecca3e4",
       "reward": 440.34124,
       "_id": {
         "$oid": "667a7d1763b83098573ead31"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x7797ce4fae2784ca93d9cc74b38b5591942ebb5e",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead32"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x9210fe47f1007e968a27534800d95fcc596117a8",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead33"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x35abad1f7c6af3f2b83b59bc599e62fcfc43e304",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead34"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x63c535177984b3a689380f7db3b839f450c26428",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead35"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xa03dde00da3b73ddbfe602f4de732e6313c8672f",
       "reward": 773.48638,
       "_id": {
         "$oid": "667a7d1763b83098573ead36"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x0a09b25335b394b3ac235667f21e27a5dc9c17f6",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead37"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xbed5a23a9db397f8463058e1c03b70fcc2806432",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead38"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xc3d5b0fa2e78d8c2691770112bca8ac43e40eacd",
       "reward": 330.25593,
       "_id": {
         "$oid": "667a7d1763b83098573ead39"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x1ac7e9459c8be453c29e631bb05cff5870409af5",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead3a"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xa8fb048d77ab9d397ce0d2b8dd9e154124b5a4e4",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead3b"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x1401c1789cb00341cfe4efc4f1397f29f9c62679",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead3c"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xc2779b072d0dcfcc98b2a5341665c17dffcc5fdd",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead3d"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x38b5600fca3855fe2def7ac8230a09a6d19cbb31",
       "reward": 0,
       "_id": {
         "$oid": "667a7d1763b83098573ead3e"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xd4c29bda968fdc5c4148927c5bdd7ab0e6a0474a",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead3f"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xe6da767ac739f621998abacaa7ad46829e93bdd7",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead40"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xa354f07dbb8334ed8ddfc4a5bcc4b0f313a9b3eb",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead41"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x42da641f15417072d40899f331257a63df5942d2",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead42"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xe0b2b27e309338ee6f004c435199ba6f2ff763e7",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead43"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xf83b53a3fcdf375a217263d598588084b7b3ac1e",
       "reward": 803.22769,
       "_id": {
         "$oid": "667a7d1763b83098573ead44"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x7ca1284440c34510d199e3365a4805ee219dc8cb",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead45"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x6f32381fe89291073b48f2f52fae4b026db17447",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead46"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xa33762d091a58e73f21633f2b48b48e85fae7f58",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead47"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x46fd590b14ff19ef914a60079bda56f468fda623",
       "reward": 330.25593,
       "_id": {
         "$oid": "667a7d1763b83098573ead48"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x15ddb49556eff95cd03944542142449892b7809a",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead49"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x3aa9b284ff7ec304cf08986572e3330722683aa8",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead4a"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x9672b5e11a5adba2243d5a0df6bf58bef1397870",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead4b"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x4aa53085e878960e6a2e943cc254bac8af495e18",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead4c"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x004f1dae8ef73ae93ffbd9794acf523de688d392",
       "reward": 599.9954,
       "_id": {
         "$oid": "667a7d1763b83098573ead4d"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x39dae911a23f78fb1a6d0d57ce1bebee71e0000b",
       "reward": 0,
       "_id": {
         "$oid": "667a7d1763b83098573ead4e"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x7285c5530cbe9f6a73b91eace4737fe38369d424",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead4f"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x7898e1eb3075ce8c050e9e2dbed06c8e7c3d378e",
       "reward": 0,
       "_id": {
         "$oid": "667a7d1763b83098573ead50"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x9386dd38397601e376b1d07d101d620c92b22a7d",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead51"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xd0945262caa40b4b391394b5e7341fdad109d444",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead52"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x2e1ad73132a69fc384189652f0b3232feafd57bf",
       "reward": 2236.55885,
       "_id": {
         "$oid": "667a7d1763b83098573ead53"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x0d56a7d04c4e6c124ab956ea39743c90798905a2",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead54"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xf1175dd5cc3a81838259b6a2198d04dc50c5cfa5",
       "reward": 616.51835,
       "_id": {
         "$oid": "667a7d1763b83098573ead55"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xe56c46d44276b7044bac25244868ec703761c508",
       "reward": 291.5073,
       "_id": {
         "$oid": "667a7d1763b83098573ead56"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xc86330d570552061acae15a98e71788c61955a93",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead57"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xfb34b6539fa16af853fd4e89366f16aacb41ea10",
       "reward": 0,
       "_id": {
         "$oid": "667a7d1763b83098573ead58"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x24456116ff9cd1590a59903354d328b4084d5585",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead59"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x6ee79d20e266af78b81bc7d1c8587f5d0cdb4519",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead5a"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xbee9508d611d47f87b93d1fba7f25d6749ab1ce3",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead5b"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x0fb3b3cf52053c2a1a5788e0a734e98e99133c49",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead5c"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x611006c370efd8e21bb894222e4d606cafb5bc8a",
       "reward": 330.25593,
       "_id": {
         "$oid": "667a7d1763b83098573ead5d"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xf181562e1fdd5ab8906e4f774bfc82d5a9aefee0",
       "reward": 1812.22917,
       "_id": {
         "$oid": "667a7d1763b83098573ead5e"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xf1a2febcb918de7858c140bc93146c5eccc36f88",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead5f"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x3e31edafb863d6055816de901b3ff9764912b16e",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead60"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x3aef6df3cb5a40fa6dc12925f73fbb83c4fa4d4d",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead61"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x04f2c82230aaa9fe7f982ca09f1f2ee513ece292",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead62"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x5314a62e5b407620f75257a9bc513d64a33fb86d",
       "reward": 440.34124,
       "_id": {
         "$oid": "667a7d1763b83098573ead63"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x3263cbb40e5457d1451abf20e74b983efe8248bb",
       "reward": 440.34124,
       "_id": {
         "$oid": "667a7d1763b83098573ead64"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x3b829a24af977e5bdc6d9591abe5bf803368532e",
       "reward": 95.55007,
       "_id": {
         "$oid": "667a7d1763b83098573ead65"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x5bca4250c8c4b14cd5900d919de5ff88acec0c92",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead66"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x75e079e47b25e69ee95dd4e168989970f149d23e",
       "reward": 0,
       "_id": {
         "$oid": "667a7d1763b83098573ead67"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x218c01cd2a30d9170f91e19ccb0b5c0fe2b6220e",
       "reward": 963.5003,
       "_id": {
         "$oid": "667a7d1763b83098573ead68"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x3be737678cc32b86f03b12b5af2f6f96ad3ae4cc",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead69"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xd59e97850f28c13afffc5d02b10b7e2e8503ec40",
       "reward": 226.7798,
       "_id": {
         "$oid": "667a7d1763b83098573ead6a"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xe98106a08690d975713df3662ef136e6afe517e6",
       "reward": 440.34124,
       "_id": {
         "$oid": "667a7d1763b83098573ead6b"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x6c2e8f1197c8e19fa9cca3d266b7f6dd8b4704e1",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead6c"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xb0fc62cfabbee770d8b9d7a37c93fc41489828b5",
       "reward": 106.64275,
       "_id": {
         "$oid": "667a7d1763b83098573ead6d"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x10adbf4437ebf76de8b28cac33dcd348bf851c90",
       "reward": 0,
       "_id": {
         "$oid": "667a7d1763b83098573ead6e"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xaaf0938e628c7b3126cd0241abe94969ab6eecbc",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead6f"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x7cc0a4f78e8093a566173a12d9ec5a625c5575c4",
       "reward": 458.62504,
       "_id": {
         "$oid": "667a7d1763b83098573ead70"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x083bc90dc708d996fbe751b2bc42bab9edf13b43",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead71"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x574276b5aa92778b5ab3697c78d2426f834600b5",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead72"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x19f1596efb60f4bdfd8f4356f0b5f65cd4232832",
       "reward": 330.25593,
       "_id": {
         "$oid": "667a7d1763b83098573ead73"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x73204374006cd2e0a73b0b0d523d7229d1eddb0b",
       "reward": 434.52715,
       "_id": {
         "$oid": "667a7d1763b83098573ead74"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x94a457e14cc4ad344320306c83ce72d1d482cd4e",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead75"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x955eb690a2120cca7103e75dfe7e01886e6fd3ec",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead76"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x591b3834259bbff6c966782271ffcc3e91c8ed75",
       "reward": 209.91945,
       "_id": {
         "$oid": "667a7d1763b83098573ead77"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x019e5eea50943ca612fbbbc15cdfb614b34601e7",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead78"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x0844532dbb80a9587ea192eee570f2526a47c8d4",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead79"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xc7566aa7a3cf0740dc8c34f631c3dda33cdf8a32",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead7a"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x1ff76716af37c179a41324527f6c70a43ab8ec82",
       "reward": 330.25593,
       "_id": {
         "$oid": "667a7d1763b83098573ead7b"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x5f2ab21e93a753fa4f3a184cb62ebc155a6f40c9",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead7c"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x7d9547be6f222b9a06eef76c763489d6e882886b",
       "reward": 330.25593,
       "_id": {
         "$oid": "667a7d1763b83098573ead7d"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x985f7075a67057dd7623c6a15a302159593cb350",
       "reward": 0,
       "_id": {
         "$oid": "667a7d1763b83098573ead7e"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xd1d44e500e5ea7abeb15c16e31bd9dcfab4a7d3e",
       "reward": 440.34124,
       "_id": {
         "$oid": "667a7d1763b83098573ead7f"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xea83ff40f81cd18e0a14d53bad89d593db75dea3",
       "reward": 583.47245,
       "_id": {
         "$oid": "667a7d1763b83098573ead80"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xfe15d3ece1e0e7192d6ea8876dd1ea545e5c2039",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead81"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xfc476d4f7d643776330d81167d14dc68880cc453",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead82"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x6293395583a358aaa9bef7d055bac3d3c69669ec",
       "reward": 113.3899,
       "_id": {
         "$oid": "667a7d1763b83098573ead83"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x218ce5b17e407e837c71b2bc42589f53fbb9d933",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead84"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x2f375e4462e4e9bff9f9c944ba3f9a5d82ad57d7",
       "reward": 209.07794,
       "_id": {
         "$oid": "667a7d1763b83098573ead85"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x634d0687d365b7d475ed08ecf998f0fb29402c0d",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead86"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x9bb4ece83016d00524e02ee520498b2a2a0dbbeb",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead87"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x77f5cf1dae6d0b653a97752b1bc85d79abf9476f",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead88"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xbec9fc7aeca98b87db07a5ad355c13365dc484d4",
       "reward": 566.9495,
       "_id": {
         "$oid": "667a7d1763b83098573ead89"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x345af9b0361405f432a62c161951368a3ca2450f",
       "reward": 1077.50866,
       "_id": {
         "$oid": "667a7d1763b83098573ead8a"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x457781b7b2b62f76734d8b3ab17c91e584f13f09",
       "reward": 0,
       "_id": {
         "$oid": "667a7d1763b83098573ead8b"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xd8f004b85e06340c105706597140d90a30cd2789",
       "reward": 0,
       "_id": {
         "$oid": "667a7d1763b83098573ead8c"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xfa4759f5ea50d33af7e34b2b31b3c5fd3aab98c8",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead8d"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x89600b171f00f1183d119b46d71b52d3e56e5704",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead8e"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0xc63f3a626a3cd0b0933ab2688bc4e308bbfbf25f",
       "reward": 0,
       "_id": {
         "$oid": "667a7d1763b83098573ead8f"
-      }
+      },
+      "txHash": "0xcd63f1104905f4b358f76a817025d028a21bdd10701d5b16e985d0e0ac2222cd"
     },
     {
       "walletAddress": "0x17460fd8ee472206b1020ff318dac6a211c474b0",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead90"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x48347679c8b4ae3be74774953f821e908e191b41",
       "reward": 440.34124,
       "_id": {
         "$oid": "667a7d1763b83098573ead91"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x0819e28e9495ca97534868cf97348270d23e4cb0",
       "reward": 350.08347,
       "_id": {
         "$oid": "667a7d1763b83098573ead92"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x5d6a1a02161ae7b040ccf8d3eab241038af9aa06",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573ead93"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0xc4de63acc7a8ff0459deb160c1c4d08701ad9a68",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead94"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x2ce429f63696d4a19569ff25334b3b90f9452b17",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead95"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0xffcd7d5aa6c8a461c50e2371e41566ef9952edfb",
       "reward": 109.82441,
       "_id": {
         "$oid": "667a7d1763b83098573ead96"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0xf59dc210afd71dbd4e4eff2ed9766e09f496317c",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead97"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0xe6aca805d817f7b11a3eb8c172f604f34b800cd9",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead98"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0xfe7b6ca885afe3bc1f29a1eea86415ba5b381c44",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead99"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x1d1a63a21f7385d8cad9f6006f53a4b2b5b8f6c6",
       "reward": 233.38898,
       "_id": {
         "$oid": "667a7d1763b83098573ead9a"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x3dc2a20938e82d42e132a6f5f3fbf3b9e9054397",
       "reward": 106.48975,
       "_id": {
         "$oid": "667a7d1763b83098573ead9b"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x4560887c9fd4cceb4aa973413c235ffd70321ffa",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573ead9c"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x9b88c11b63d1cad590e35c4e829164a9faf81223",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead9d"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x4086ad8cf88c245481780a8fe65a2d43af9b12ce",
       "reward": 240.21395,
       "_id": {
         "$oid": "667a7d1763b83098573ead9e"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x74fd7866f8d7baa0a50bc12f23397b44599a7340",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573ead9f"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x25b946ba7a5ce01bf5e6215b9e2be501499d5b03",
       "reward": 550.42655,
       "_id": {
         "$oid": "667a7d1763b83098573eada0"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0xee50129123a6e0f5605e99855fe5ba9fabb5638a",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573eada1"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x43d35fe8667facaf8cc001840c7cb74bca7a1114",
       "reward": 715.65605,
       "_id": {
         "$oid": "667a7d1763b83098573eada2"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x5a866c09b5314a80d0275cb46536ba3db356545f",
       "reward": 411.27077,
       "_id": {
         "$oid": "667a7d1763b83098573eada3"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x4bfdc866f835aba693a427d724fad18bcff62f15",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573eada4"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0x7b8c55fb99966394c6cfc6c7c90bad3a08bcf891",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573eada5"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0xf3463582b8b3b335240090f82af7b1aa6e32db78",
       "reward": 220.17062,
       "_id": {
         "$oid": "667a7d1763b83098573eada6"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0xde76b140f6da8ebac7d452c61f34ebc8d1528d74",
       "reward": 110.08531,
       "_id": {
         "$oid": "667a7d1763b83098573eada7"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     },
     {
       "walletAddress": "0xebb5c2b442a3628d156abfad34be7f0cc26464b0",
       "reward": 206.7064,
       "_id": {
         "$oid": "667a7d1763b83098573eada8"
-      }
+      },
+      "txHash": "0x623c4169d8edb90d433590abdf7f5c0d71dd7e33fdfe1ae439c54b57d2cd4969"
     }
   ],
   "amount": 275547.40337,
-  "releasedWallets": []
+  "bridgeTxHash": "0x61c0e0a0aa14f593ed94ad8626e2d103458a0b6b81042b467d77dcd881244417"
 }
