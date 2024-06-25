@@ -1,7 +1,7 @@
 import {ethers} from 'ethers'
 const fs = require('fs')
 import {getDeploymentAddresses} from '../utils/readStatic'
-import {MPRO} from '../typechain-types'
+import {MPRO, MPROAutoStake} from '../typechain-types'
 
 interface Staker {
 	walletAddress: string
@@ -35,21 +35,29 @@ module.exports = async function (args: any, hre: any) {
 	const mproAddress = getDeploymentAddresses(hre.network.name)['MPROLight']
 	const stakeAddress = getDeploymentAddresses(hre.network.name)['MPROAutoStake']
 
+	const unstakedStakers = stakersData.stakers.filter(
+		(staker: Staker) => !staker?.txHash,
+	)
+
+	const amountLeft = unstakedStakers.reduce(
+		(acc: number, staker: Staker) => acc + staker.reward,
+		0,
+	)
+
 	const mproToken = (await hre.ethers.getContractAt(
 		'contracts/MPROLight.sol:MPRO',
 		mproAddress,
 	)) as MPRO
 
-	const stakeContarct = await hre.ethers.getContractAt(
+	const stakeContract = (await hre.ethers.getContractAt(
 		'contracts/MPROStake.sol:MPROAutoStake',
 		stakeAddress,
-	)
+	)) as MPROAutoStake
 
 	const updaterMPROBalance = await mproToken.balanceOf(owner)
 	const stakeMPROAllowance = await mproToken.allowance(owner, stakeAddress)
 
-	const amountToUpdate = ethers.parseEther(String(stakersData.amount))
-
+	const amountToUpdate = ethers.parseEther(String(amountLeft))
 	// Check MPRO balance
 	if (updaterMPROBalance < amountToUpdate) {
 		console.log(
@@ -77,9 +85,6 @@ module.exports = async function (args: any, hre: any) {
 	}
 
 	const STAKERS_CHUNK = 100
-	const unstakedStakers = stakersData.stakers.filter(
-		(staker: Staker) => !staker?.txHash,
-	)
 
 	for (let i = 0; i < unstakedStakers.length; i += STAKERS_CHUNK) {
 		const chunkStakers = unstakedStakers.slice(i, i + STAKERS_CHUNK)
@@ -91,7 +96,7 @@ module.exports = async function (args: any, hre: any) {
 		)
 
 		try {
-			const tx = await stakeContarct
+			const tx = await stakeContract
 				.connect(updaterSigner)
 				.updateStakers(stakersAddresses, stakersAmounts)
 			await tx.wait()
