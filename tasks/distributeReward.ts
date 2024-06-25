@@ -83,11 +83,11 @@ module.exports = async function (args: any, hre: any) {
 		`fees[0] (wei): ${nativeFee} / (eth): ${ethers.formatEther(nativeFee)}`,
 	)
 
-	// const txDistribution = await masterDistributor
-	// 	.connect(ownerSigner)
-	// 	.distribute(mproDistributor, bigIntAmount)
+	const txDistribution = await masterDistributor
+		.connect(ownerSigner)
+		.distribute(mproDistributor, bigIntAmount)
 
-	// await txDistribution.wait()
+	await txDistribution.wait()
 
 	// Bridge tokens
 	const txBridge = await mproToken
